@@ -75,9 +75,12 @@ uv run python tests/eval_pydantic_ai.py
 **URL:** http://localhost:8000
 
 **Features:**
-- Click "Simple Example" or "Detailed Example" to load sample data
+- **📝 Simple Example** - Basic patient data and questions
+- **📋 Detailed Example** - Comprehensive patient record
+- **🎭 Actor-Critic Demo** - Ambiguous data that triggers automatic refinement
 - Click "Generate Answers" to see AI-generated responses
 - View confidence scores and reasoning for each answer
+- Refined answers show a purple **🎭 Actor-Critic** badge
 
 ### 2. Annotation UI (Clinical Review)
 
@@ -221,9 +224,15 @@ Provides 4 focused examples (2 text, 2 boolean) covering:
 - Actor regenerates improved answer
 - Tracks improvement in Logfire
 
-**Try it yourself:**
+**Try it yourself (Frontend - Easiest!):**
+1. Start server: `uv run fastapi dev`
+2. Open http://localhost:8000
+3. Click the purple **🎭 Actor-Critic Demo** button
+4. Click **Generate Answers**
+5. Look for the purple **🎭 Actor-Critic** badge in refined answers!
+
+**Or via CLI:**
 ```bash
-# Test with ambiguous patient data that triggers actor-critic
 curl -X POST "http://localhost:8000/answers" \
   -H "Content-Type: application/json" \
   -d @sample_data/actor_critic_example.json
@@ -250,7 +259,14 @@ curl -X POST "http://localhost:8000/answers" \
 }
 ```
 
-Notice the `[Refined via Actor-Critic]` prefix in the reasoning!
+**In the frontend UI**, refined answers display with a purple gradient badge:
+```
+🎭 Actor-Critic
+Patient mentions trying to eat better and occasional walks, but there 
+is no documentation of a structured program...
+```
+
+The `[Refined via Actor-Critic]` prefix is automatically converted to a styled badge!
 
 ### 3. Evaluation Pipeline
 **Location:** `tests/eval_pydantic_ai.py`
