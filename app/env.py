@@ -14,3 +14,11 @@ def setup_env():
 
 def get_openai_api_key():
     return os.getenv("OPENAI_API_KEY")
+
+
+def get_openrouter_api_key():
+    return os.getenv("OPENROUTER_API_KEY")
+
+
+def get_openrouter_model():
+    return os.getenv("OPENROUTER_MODEL", "openai/gpt-4o-mini")

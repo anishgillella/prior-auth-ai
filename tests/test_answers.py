@@ -37,6 +37,8 @@ def test_data():
 
 def test_get_answers(test_data):
     response = client.post("/answers", json=test_data.model_dump())
+    if response.status_code != 200:
+        print(f"Error response: {response.json()}")
     assert response.status_code == 200
     assert "answers" in response.json()
     assert len(response.json()["answers"]) > 0

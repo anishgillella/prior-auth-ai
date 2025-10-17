@@ -15,6 +15,7 @@ dependencies = [
     "logfire[asyncpg]>=3.18.0",
     "opentelemetry-instrumentation-asyncpg>=0.55b1",
     "asyncpg>=0.30.0",
+    "openai>=1.86.0",
 ]
 
 [project.scripts]

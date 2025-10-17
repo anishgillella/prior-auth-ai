@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.10, <3.14"
 
 [[package]]
@@ -288,6 +288,7 @@ dependencies = [
     { name = "asyncpg" },
     { name = "fastapi" },
     { name = "logfire", extra = ["asyncpg"] },
+    { name = "openai" },
     { name = "opentelemetry-instrumentation-asyncpg" },
     { name = "pydantic-logfire" },
     { name = "python-dotenv" },
@@ -324,6 +325,7 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.115.12" },
     { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.28.1" },
     { name = "logfire", extras = ["asyncpg"], specifier = ">=3.18.0" },
+    { name = "openai", specifier = ">=1.86.0" },
     { name = "openai", marker = "extra == 'dev'", specifier = ">=1.86.0" },
     { name = "opentelemetry-instrumentation-asyncpg", specifier = ">=0.55b1" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=4.2.0" },
