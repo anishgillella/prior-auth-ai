@@ -1,7 +1,9 @@
 from fastapi import FastAPI, HTTPException
+import logfire
 from openai import AsyncOpenAI
 
 from app.env import get_openrouter_api_key, get_openrouter_model, setup_env
+from app.examples import format_few_shot_examples
 
 from .models import (
     Answer,
@@ -13,6 +15,9 @@ from .models import (
 
 setup_env()
 
+# Configure Logfire for observability
+logfire.configure()
+logfire.instrument_openai(AsyncOpenAI)
 
 # Initialize the FastAPI application
 app = FastAPI(
@@ -20,6 +25,9 @@ app = FastAPI(
     description="API for generating answers to prior authorization questions using patient data",
     version="1.0.0",
 )
+
+# Instrument FastAPI with Logfire
+logfire.instrument_fastapi(app)
 
 # Initialize OpenRouter client (OpenAI-compatible)
 openrouter_client = AsyncOpenAI(
@@ -61,6 +69,7 @@ Visit Notes:
 async def answer_question(patient_context: str, question) -> tuple[str | bool, float, str]:
     """
     Use LLM with Pydantic structured outputs to answer a single question based on patient context.
+    Uses few-shot prompting to improve answer quality.
 
     Args:
         patient_context: Formatted string with patient information
@@ -71,60 +80,90 @@ async def answer_question(patient_context: str, question) -> tuple[str | bool, f
     """
     model = get_openrouter_model()
 
-    # Determine the appropriate response model based on question type
-    if question.type == "boolean":
-        system_prompt = """You are a medical assistant helping to complete prior authorization forms.
-Answer the question based on the provided patient information.
-Provide a true or false answer with confidence score and reasoning."""
+    # Start Logfire span for tracking
+    with logfire.span(
+        "answer_question",
+        question_key=question.key,
+        question_type=question.type,
+        model=model,
+    ):
+        # Determine the appropriate response model based on question type
+        if question.type == "boolean":
+            # Get few-shot examples for boolean questions
+            few_shot_examples = format_few_shot_examples("boolean")
 
-        user_prompt = f"""{patient_context}
+            system_prompt = f"""You are a medical assistant helping to complete prior authorization forms.
+Answer the question based on the provided patient information.
+Provide a true or false answer with confidence score and reasoning.
+
+{few_shot_examples}"""
+
+            user_prompt = f"""{patient_context}
 
 Question: {question.content}
 
 Based on the patient information above, determine if the answer is true or false.
 Provide your confidence level and explain your reasoning."""
 
-        response_model = BooleanAnswerResponse
+            response_model = BooleanAnswerResponse
 
-    else:
-        # Text question
-        system_prompt = """You are a medical assistant helping to complete prior authorization forms.
+        else:
+            # Text question - get few-shot examples
+            few_shot_examples = format_few_shot_examples("text")
+
+            system_prompt = f"""You are a medical assistant helping to complete prior authorization forms.
 Answer the question based on the provided patient information.
-Be concise and specific. Provide confidence score and reasoning."""
+Be concise and specific. Provide confidence score and reasoning.
 
-        user_prompt = f"""{patient_context}
+{few_shot_examples}"""
+
+            user_prompt = f"""{patient_context}
 
 Question: {question.content}
 
 Provide a concise, specific answer based on the patient information.
 Include your confidence level and explain your reasoning."""
 
-        response_model = TextAnswerResponse
+            response_model = TextAnswerResponse
 
-    try:
-        # Use OpenAI's structured output feature with Pydantic models
-        # This ensures type-safe responses that always match our schema
-        completion = await openrouter_client.beta.chat.completions.parse(
-            model=model,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
-            response_format=response_model,
-            temperature=0.3,  # Lower temperature for more consistent/factual responses
-            max_tokens=500,  # Sufficient for gpt-4o-mini (no reasoning token overhead)
-        )
+        try:
+            # Use OpenAI's structured output feature with Pydantic models
+            # This ensures type-safe responses that always match our schema
+            completion = await openrouter_client.beta.chat.completions.parse(
+                model=model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                response_format=response_model,
+                temperature=0.3,  # Lower temperature for more consistent/factual responses
+                max_tokens=500,  # Sufficient for gpt-4o-mini (no reasoning token overhead)
+            )
 
-        # Extract the parsed Pydantic model - already validated!
-        parsed_response = completion.choices[0].message.parsed
+            # Extract the parsed Pydantic model - already validated!
+            parsed_response = completion.choices[0].message.parsed
 
-        return parsed_response.answer, parsed_response.confidence, parsed_response.reasoning
+            # Log answer metrics to Logfire
+            logfire.info(
+                "answer_generated",
+                question_key=question.key,
+                answer_type=type(parsed_response.answer).__name__,
+                confidence=parsed_response.confidence,
+                has_reasoning=bool(parsed_response.reasoning),
+            )
 
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error generating answer for question '{question.key}': {str(e)}",
-        )
+            return parsed_response.answer, parsed_response.confidence, parsed_response.reasoning
+
+        except Exception as e:
+            logfire.error(
+                "answer_generation_failed",
+                question_key=question.key,
+                error=str(e),
+            )
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error generating answer for question '{question.key}': {str(e)}",
+            )
 
 
 @app.post("/answers")
@@ -143,23 +182,39 @@ async def get_answers(data: AnswerInput) -> AnswerOutput:
             detail="OPENROUTER_API_KEY not configured. Please set it in your .env file.",
         )
 
-    # Build patient context once
-    patient_context = build_patient_context(data.patient)
+    # Track the entire request with Logfire
+    with logfire.span(
+        "generate_all_answers",
+        patient_name=f"{data.patient.first_name} {data.patient.last_name}",
+        question_count=len(data.question_set.questions),
+        medication=data.patient.prescription.medication,
+    ):
+        # Build patient context once
+        patient_context = build_patient_context(data.patient)
 
-    # Generate answers for each question
-    answers = []
-    for question in data.question_set.questions:
-        # TODO: Handle visible_if conditions in future iteration
-        answer_value, confidence, reasoning = await answer_question(
-            patient_context, question
-        )
-        answers.append(
-            Answer(
-                question=question,
-                value=answer_value,
-                confidence=confidence,
-                reasoning=reasoning,
+        # Generate answers for each question
+        answers = []
+        for question in data.question_set.questions:
+            # TODO: Handle visible_if conditions in future iteration
+            answer_value, confidence, reasoning = await answer_question(
+                patient_context, question
             )
+            answers.append(
+                Answer(
+                    question=question,
+                    value=answer_value,
+                    confidence=confidence,
+                    reasoning=reasoning,
+                )
+            )
+
+        # Log summary statistics
+        avg_confidence = sum(a.confidence for a in answers) / len(answers)
+        logfire.info(
+            "answers_complete",
+            total_questions=len(answers),
+            average_confidence=avg_confidence,
+            question_set_name=data.question_set.name,
         )
 
-    return AnswerOutput(answers=answers)
+        return AnswerOutput(answers=answers)

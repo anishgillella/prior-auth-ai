@@ -1,0 +1,175 @@
+[
+  {
+    "name": "BMI Extraction - Explicit",
+    "patient": {
+      "first_name": "John",
+      "last_name": "Doe",
+      "date_of_birth": "1970-01-01",
+      "gender": "Male",
+      "prescription": {
+        "medication": "Zepbound",
+        "dosage": "5 mg",
+        "frequency": "once weekly",
+        "duration": "ongoing"
+      },
+      "visit_notes": [
+        "Patient is a 55-year-old male with BMI of 37.4 kg/m². Weight: 261 lbs. Height: 5 ft 10 in."
+      ]
+    },
+    "question": {
+      "type": "text",
+      "key": "patient_bmi",
+      "content": "What is the patient's BMI?"
+    },
+    "expected": {
+      "answer_contains": "37.4",
+      "min_confidence": 0.9,
+      "must_cite_source": true
+    }
+  },
+  {
+    "name": "Lifestyle Modifications - Explicit",
+    "patient": {
+      "first_name": "Sarah",
+      "last_name": "Smith",
+      "date_of_birth": "1980-05-15",
+      "gender": "Female",
+      "prescription": {
+        "medication": "Zepbound",
+        "dosage": "10 mg",
+        "frequency": "once weekly",
+        "duration": "ongoing"
+      },
+      "visit_notes": [
+        "Patient has tried multiple diets including calorie restriction and low-carbohydrate regimens.",
+        "Patient worked with a registered dietitian and joined a gym in January 2025.",
+        "Patient has engaged in lifestyle modifications for over 6 months."
+      ]
+    },
+    "question": {
+      "type": "boolean",
+      "key": "tried_lifestyle",
+      "content": "Has the patient tried lifestyle modifications?"
+    },
+    "expected": {
+      "answer": true,
+      "min_confidence": 0.9,
+      "must_cite_source": true
+    }
+  },
+  {
+    "name": "Missing Information - Low Confidence",
+    "patient": {
+      "first_name": "John",
+      "last_name": "Doe",
+      "date_of_birth": "1970-01-01",
+      "gender": "Male",
+      "prescription": {
+        "medication": "Zepbound",
+        "dosage": "5 mg",
+        "frequency": "once weekly",
+        "duration": "ongoing"
+      },
+      "visit_notes": [
+        "Patient presents for follow-up regarding weight management therapy."
+      ]
+    },
+    "question": {
+      "type": "text",
+      "key": "patient_bmi",
+      "content": "What is the patient's BMI?"
+    },
+    "expected": {
+      "answer_contains": "not available",
+      "max_confidence": 0.3,
+      "must_cite_source": true
+    }
+  },
+  {
+    "name": "Age Calculation",
+    "patient": {
+      "first_name": "Mike",
+      "last_name": "Johnson",
+      "date_of_birth": "1985-03-15",
+      "gender": "Male",
+      "prescription": {
+        "medication": "Zepbound",
+        "dosage": "5 mg",
+        "frequency": "once weekly",
+        "duration": "ongoing"
+      },
+      "visit_notes": [
+        "Patient is a 40-year-old male presenting for initial evaluation."
+      ]
+    },
+    "question": {
+      "type": "text",
+      "key": "patient_age",
+      "content": "What is the patient's age in years?"
+    },
+    "expected": {
+      "answer_contains": "40",
+      "min_confidence": 0.9,
+      "must_cite_source": true
+    }
+  },
+  {
+    "name": "Diabetes History - Negative",
+    "patient": {
+      "first_name": "Jane",
+      "last_name": "Williams",
+      "date_of_birth": "1975-08-20",
+      "gender": "Female",
+      "prescription": {
+        "medication": "Zepbound",
+        "dosage": "5 mg",
+        "frequency": "once weekly",
+        "duration": "ongoing"
+      },
+      "visit_notes": [
+        "Patient has history of hypertension, well controlled.",
+        "No history of diabetes (last HbA1c 5.7% in May 2025)."
+      ]
+    },
+    "question": {
+      "type": "boolean",
+      "key": "has_diabetes",
+      "content": "Does the patient have diabetes?"
+    },
+    "expected": {
+      "answer": false,
+      "min_confidence": 0.9,
+      "must_cite_source": true
+    }
+  },
+  {
+    "name": "Ambiguous Case - Moderate Confidence",
+    "patient": {
+      "first_name": "Tom",
+      "last_name": "Brown",
+      "date_of_birth": "1982-12-10",
+      "gender": "Male",
+      "prescription": {
+        "medication": "Zepbound",
+        "dosage": "5 mg",
+        "frequency": "once weekly",
+        "duration": "ongoing"
+      },
+      "visit_notes": [
+        "Patient mentions trying to eat better over the past few weeks."
+      ]
+    },
+    "question": {
+      "type": "boolean",
+      "key": "tried_lifestyle",
+      "content": "Has the patient tried lifestyle modifications?"
+    },
+    "expected": {
+      "answer": true,
+      "min_confidence": 0.4,
+      "max_confidence": 0.7,
+      "must_cite_source": true
+    }
+  }
+]
+

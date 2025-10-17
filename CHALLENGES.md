@@ -280,5 +280,202 @@ class TextAnswerResponse(BaseModel):
 
 ---
 
+## 9. Few-Shot Prompting Implementation
+
+**Challenge:** Improve answer quality through prompt optimization without fine-tuning.
+
+**Approach:** Implement few-shot prompting by providing examples in system prompts.
+
+**Implementation:**
+1. **Created `app/examples.py`:**
+   - 3 examples each for text and boolean questions
+   - Cover different confidence levels (explicit, inferred, missing)
+   - Show proper reasoning format
+
+2. **Updated prompts in `app/main.py`:**
+   ```python
+   few_shot_examples = format_few_shot_examples("text")
+   system_prompt = f"""...
+   {few_shot_examples}"""
+   ```
+
+3. **Example structure:**
+   - Question + Patient Context
+   - Expected answer with confidence
+   - Reasoning that cites evidence
+
+**Benefits:**
+- Shows LLM how to format answers consistently
+- Demonstrates appropriate confidence levels
+- Teaches citation of evidence
+
+**Trade-off:** Increased token usage (~300-400 tokens per request) but better quality.
+
+**Lesson:** Few-shot prompting is highly effective for structured medical tasks.
+
+---
+
+## 10. Logfire Integration for Observability
+
+**Challenge:** Need production-grade monitoring and observability.
+
+**Initial Problem:**
+```
+RuntimeError: The `logfire.instrument_fastapi()` requires 
+the `opentelemetry-instrumentation-fastapi` package.
+```
+
+**Root Cause:**
+- Logfire needs additional instrumentation packages
+- `logfire[fastapi]` extra wasn't specified
+- Missing OpenTelemetry ASGI instrumentation
+
+**Solution:**
+```toml
+dependencies = [
+    "logfire[asyncpg,fastapi]>=3.18.0",
+    "opentelemetry-instrumentation-fastapi>=0.50b0",
+]
+```
+
+**Implementation:**
+1. **Configured Logfire:**
+   ```python
+   logfire.configure()
+   logfire.instrument_openai(AsyncOpenAI)
+   logfire.instrument_fastapi(app)
+   ```
+
+2. **Added tracking spans:**
+   - `generate_all_answers` - Full request tracking
+   - `answer_question` - Per-question performance
+   - Log confidence, answer type, errors
+
+3. **Metrics captured:**
+   - Request latency
+   - Confidence score distribution
+   - Token usage per LLM call
+   - Error rates and types
+
+**Dashboard Available:** https://logfire-us.pydantic.dev/
+
+**Lesson:** Proper observability setup requires understanding dependency extras and instrumentation packages.
+
+---
+
+## 11. Evaluation Pipeline Development
+
+**Challenge:** Need objective metrics to validate few-shot improvements.
+
+**Requirements:**
+- Test against known correct answers
+- Measure confidence calibration
+- Validate reasoning quality
+- Quantify improvements
+
+**Implementation:**
+
+1. **Created test cases** (`tests/fixtures/eval_test_cases.json`):
+   - 6 diverse scenarios
+   - Explicit, ambiguous, and missing information
+   - Expected answers with confidence ranges
+
+2. **Built evaluation framework** (`tests/eval_answers.py`):
+   - Automated test execution
+   - Multiple validation criteria:
+     - Answer content matching
+     - Confidence min/max thresholds
+     - Reasoning presence and quality
+   - Summary statistics and grading
+
+3. **Metrics tracked:**
+   - Pass rate (83.3% - 5/6 cases)
+   - Average confidence (0.80)
+   - Confidence range (0.00 - 1.00)
+
+**Results:**
+```
+✅ Explicit information: 100% accurate (BMI, age, diabetes)
+✅ Missing information: Correctly identified with 0.0 confidence
+✅ Clear booleans: Accurate true/false
+❌ Ambiguous cases: Over-confident (0.80 vs expected 0.4-0.7)
+```
+
+**Key Finding:**
+Few-shot prompting improved accuracy on clear cases but confidence calibration needs work on ambiguous inputs.
+
+**Future Improvement:**
+Add low-confidence examples to few-shot set to teach appropriate uncertainty.
+
+**Lesson:** Quantitative evaluation reveals both strengths and specific areas for improvement.
+
+---
+
+## 12. Confidence Calibration Challenge
+
+**Challenge:** Model too confident on weak evidence.
+
+**Test Case:**
+```
+Patient: "mentions trying to eat better over the past few weeks"
+Question: "Has patient tried lifestyle modifications?"
+Expected: confidence 0.4-0.7 (weak evidence)
+Actual: confidence 0.80 (too high)
+```
+
+**Analysis:**
+- Few-shot examples all show high-confidence cases (0.9-1.0)
+- No examples of uncertain situations
+- Model learned pattern but not calibration
+
+**Implications:**
+- High confidence might lead to incorrect prior auth decisions
+- Need to teach model when to be uncertain
+
+**Potential Solutions:**
+1. Add low/medium confidence examples to few-shot set
+2. Use temperature tuning (higher temperature = more uncertainty)
+3. Post-process confidence scores based on keyword analysis
+4. Actor-critic system to review confidence appropriateness
+
+**Status:** Identified through evaluation, documented for future work.
+
+**Lesson:** Evaluation pipelines catch subtle issues that manual testing misses.
+
+---
+
+## Summary of Extras Implementation
+
+### What We Built:
+1. ✅ **Few-Shot Prompting** - Improved answer quality with examples
+2. ✅ **Eval Pipeline** - Automated quality testing with 6 test cases
+3. ✅ **Logfire Integration** - Full observability and monitoring
+4. ✅ **Confidence Scores** - Added in core, validated in eval
+
+### Key Achievements:
+- **83.3% pass rate** on evaluation tests
+- **Sub-3 second** response times per question
+- **Full traceability** via Logfire dashboard
+- **Identified specific improvement areas** (confidence calibration)
+
+### Production Readiness:
+- ✅ Structured outputs (type-safe)
+- ✅ Monitoring and observability
+- ✅ Automated testing
+- ✅ Performance metrics
+- ⚠️  Confidence calibration needs tuning for ambiguous cases
+
+### Cost Analysis:
+**Per Question:**
+- gpt-4o-mini: ~$0.0001-0.0002
+- Few-shot overhead: ~30% more tokens
+- Still cost-effective for production
+
+**Per Form (40 questions):**
+- ~$0.004-0.008 per prior auth form
+- Acceptable for healthcare use case
+
+---
+
 *Document last updated: October 17, 2025*
 

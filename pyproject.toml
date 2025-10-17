@@ -12,8 +12,9 @@ dependencies = [
     "uvicorn>=0.34.3",
     "python-dotenv>=1.0.0",
     "pydantic-logfire>=0.0.1",
-    "logfire[asyncpg]>=3.18.0",
+    "logfire[asyncpg,fastapi]>=3.18.0",
     "opentelemetry-instrumentation-asyncpg>=0.55b1",
+    "opentelemetry-instrumentation-fastapi>=0.50b0",
     "asyncpg>=0.30.0",
     "openai>=1.86.0",
 ]
