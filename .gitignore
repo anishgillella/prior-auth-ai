@@ -37,3 +37,6 @@ wheels/
 
 # Logs
 *.log
+
+# Generated annotation data (runtime data, not source code)
+sample_data/annotations.json
