@@ -38,7 +38,24 @@ def test_data():
 def test_get_answers(test_data):
     response = client.post("/answers", json=test_data.model_dump())
     if response.status_code != 200:
-        print(f"Error response: {response.json()}")
+        print(f"\n❌ Error response: {response.json()}")
+    
     assert response.status_code == 200
     assert "answers" in response.json()
-    assert len(response.json()["answers"]) > 0
+    
+    result = response.json()
+    assert len(result["answers"]) > 0
+    
+    # Print results for visibility
+    print(f"\n{'='*80}")
+    print(f"Test Results: {len(result['answers'])} answers generated")
+    print(f"{'='*80}\n")
+    
+    for i, answer in enumerate(result["answers"], 1):
+        question = answer["question"]
+        print(f"{i}. [{question['type'].upper()}] {question['content']}")
+        print(f"   Key: {question['key']}")
+        print(f"   Answer: {answer['value']}")
+        print(f"   Confidence: {answer['confidence']:.2f}")
+        print(f"   Reasoning: {answer['reasoning']}")
+        print()
