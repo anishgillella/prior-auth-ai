@@ -571,7 +571,8 @@
         function formatReasoning(reasoning) {
             // Highlight actor-critic usage
             if (reasoning.includes('[Refined via Actor-Critic]')) {
-                return `<span style="display: inline-block; padding: 4px 8px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 4px; font-weight: 600; margin-right: 8px;">🎭 Actor-Critic</span>${reasoning.replace('[Refined via Actor-Critic]', '')}`;
+                const cleanedReasoning = reasoning.replace('[Refined via Actor-Critic]', '').trim();
+                return `<span style="display: inline-block; padding: 4px 8px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 4px; font-weight: 600; margin-bottom: 4px;">🎭 Actor-Critic</span><br>${cleanedReasoning}`;
             }
             return reasoning;
         }
