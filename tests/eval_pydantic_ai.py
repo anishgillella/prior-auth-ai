@@ -99,7 +99,7 @@ async def create_evaluator_agent():
     # This way we don't need a separate OpenAI key
     os.environ["OPENAI_API_KEY"] = get_openrouter_api_key()
     os.environ["OPENAI_BASE_URL"] = "https://openrouter.ai/api/v1"
-    
+
     # Use the same model as the main API
     model = OpenAIModel(get_openrouter_model())
 
@@ -142,13 +142,13 @@ async def evaluate_answer(
 
 Test Case: {case_name}
 
-Question: {answer['question']['content']}
-Question Type: {answer['question']['type']}
+Question: {answer["question"]["content"]}
+Question Type: {answer["question"]["type"]}
 
 Generated Answer:
-- Value: {answer['value']}
-- Confidence: {answer['confidence']:.2f}
-- Reasoning: {answer['reasoning']}
+- Value: {answer["value"]}
+- Confidence: {answer["confidence"]:.2f}
+- Reasoning: {answer["reasoning"]}
 
 Expected Criteria:
 {json.dumps(expected, indent=2)}
@@ -267,8 +267,10 @@ def print_summary(metrics: EvaluationMetrics):
         print("Failed Cases:")
         for failure in failed_cases:
             print(f"  • {failure['case']}")
-            print(f"    Scores: A={failure['accuracy']:.2f}, "
-                  f"C={failure['confidence']:.2f}, R={failure['reasoning']:.2f}")
+            print(
+                f"    Scores: A={failure['accuracy']:.2f}, "
+                f"C={failure['confidence']:.2f}, R={failure['reasoning']:.2f}"
+            )
             print(f"    {failure['explanation']}")
         print()
 
@@ -294,4 +296,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-
