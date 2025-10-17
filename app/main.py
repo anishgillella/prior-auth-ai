@@ -1,6 +1,10 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 import logfire
 from openai import AsyncOpenAI
+from pathlib import Path
 
 from app.env import get_openrouter_api_key, get_openrouter_model, setup_env
 from app.examples import format_few_shot_examples
@@ -26,8 +30,23 @@ app = FastAPI(
     version="1.0.0",
 )
 
+# Add CORS middleware to allow frontend access
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, specify exact origins
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Instrument FastAPI with Logfire
 logfire.instrument_fastapi(app)
+
+# Get project root directory
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Mount static files for frontend
+app.mount("/sample_data", StaticFiles(directory=str(BASE_DIR / "sample_data")), name="sample_data")
 
 # Initialize OpenRouter client (OpenAI-compatible)
 openrouter_client = AsyncOpenAI(
@@ -38,6 +57,18 @@ openrouter_client = AsyncOpenAI(
 
 @app.get("/")
 async def root():
+    """Serve the frontend UI."""
+    frontend_path = BASE_DIR / "frontend" / "index.html"
+    if frontend_path.exists():
+        return FileResponse(frontend_path)
+    return {
+        "message": "Pharmacy Prior Authorization API is running",
+        "status": "healthy",
+    }
+
+
+@app.get("/health")
+async def health_check():
     """Health check endpoint."""
     return {
         "message": "Pharmacy Prior Authorization API is running",

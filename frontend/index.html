@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prior Authorization Assistant</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            margin-bottom: 2rem;
+        }
+
+        .input-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .input-section label {
+            display: block;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 0.5rem;
+            font-size: 1rem;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 150px;
+            padding: 1rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            resize: vertical;
+            transition: border-color 0.3s;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        button {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            flex: 1;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #667eea;
+        }
+
+        .spinner {
+            border: 4px solid #f0f0f0;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 1rem auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .results-header h2 {
+            color: #333;
+            font-size: 1.5rem;
+        }
+
+        .stats {
+            display: flex;
+            gap: 1.5rem;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .answer-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            border-left: 4px solid #e0e0e0;
+            transition: all 0.3s;
+        }
+
+        .answer-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transform: translateX(4px);
+        }
+
+        .answer-card.high-confidence {
+            border-left-color: #4caf50;
+        }
+
+        .answer-card.medium-confidence {
+            border-left-color: #ff9800;
+        }
+
+        .answer-card.low-confidence {
+            border-left-color: #f44336;
+        }
+
+        .question-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 1rem;
+        }
+
+        .question-text {
+            flex: 1;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .question-type {
+            background: #667eea;
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .answer-value {
+            font-size: 1.25rem;
+            color: #667eea;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        .confidence-section {
+            margin-bottom: 1rem;
+        }
+
+        .confidence-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            color: #666;
+            margin-bottom: 0.5rem;
+        }
+
+        .confidence-bar {
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            transition: width 0.5s ease;
+            border-radius: 4px;
+        }
+
+        .confidence-fill.high {
+            background: linear-gradient(90deg, #4caf50, #66bb6a);
+        }
+
+        .confidence-fill.medium {
+            background: linear-gradient(90deg, #ff9800, #ffa726);
+        }
+
+        .confidence-fill.low {
+            background: linear-gradient(90deg, #f44336, #ef5350);
+        }
+
+        .reasoning {
+            background: white;
+            padding: 1rem;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            color: #555;
+            line-height: 1.6;
+            border: 1px solid #e0e0e0;
+        }
+
+        .reasoning-label {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 4px solid #c62828;
+        }
+
+        .sample-buttons {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .sample-btn {
+            padding: 0.5rem 1rem;
+            background: #e3f2fd;
+            color: #1976d2;
+            border: 1px solid #1976d2;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .sample-btn:hover {
+            background: #1976d2;
+            color: white;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏥 Prior Authorization Assistant</h1>
+            <p>AI-powered medical prior authorization form completion</p>
+        </div>
+
+        <div class="card">
+            <div class="input-section">
+                <label>Patient Data & Questions (JSON)</label>
+                <div class="sample-buttons">
+                    <button class="sample-btn" onclick="loadSimpleExample()">📝 Simple Example</button>
+                    <button class="sample-btn" onclick="loadDetailedExample()">📋 Detailed Example</button>
+                </div>
+                <textarea id="jsonInput" placeholder='Paste your JSON here or click a sample button above...'></textarea>
+            </div>
+
+            <div class="button-group">
+                <button class="btn-primary" onclick="submitForm()" id="submitBtn">
+                    Generate Answers
+                </button>
+                <button class="btn-secondary" onclick="clearForm()">Clear</button>
+            </div>
+        </div>
+
+        <div id="loadingSection" class="card hidden">
+            <div class="loading">
+                <div class="spinner"></div>
+                <p>Analyzing patient data and generating answers...</p>
+            </div>
+        </div>
+
+        <div id="errorSection" class="card hidden">
+            <div class="error" id="errorMessage"></div>
+        </div>
+
+        <div id="resultsSection" class="card hidden">
+            <div class="results-header">
+                <h2>📊 Generated Answers</h2>
+                <div class="stats">
+                    <div class="stat-item">
+                        <span>Total:</span>
+                        <strong id="totalCount">0</strong>
+                    </div>
+                    <div class="stat-item">
+                        <span>Avg Confidence:</span>
+                        <strong id="avgConfidence">0%</strong>
+                    </div>
+                </div>
+            </div>
+            <div id="answersContainer"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8000/answers';
+
+        function loadSimpleExample() {
+            const example = {
+                "patient": {
+                    "first_name": "John",
+                    "last_name": "Doe",
+                    "date_of_birth": "1970-01-01",
+                    "gender": "Male",
+                    "prescription": {
+                        "medication": "Zepbound",
+                        "dosage": "5 mg",
+                        "frequency": "once weekly",
+                        "duration": "ongoing"
+                    },
+                    "visit_notes": [
+                        "Patient is a 55-year-old male with BMI of 37.4 kg/m². Weight: 261 lbs. Height: 5 ft 10 in. He has tried multiple diets including calorie restriction and low-carbohydrate regimens, as well as working with a dietitian and joining a gym. Patient has engaged in lifestyle modifications for over 6 months with minimal sustained results."
+                    ]
+                },
+                "question_set": {
+                    "name": "Prior Authorization Questions",
+                    "questions": [
+                        {
+                            "type": "text",
+                            "key": "patient_bmi",
+                            "content": "What is the patient's BMI?"
+                        },
+                        {
+                            "type": "text",
+                            "key": "patient_age",
+                            "content": "What is the patient's age in years?"
+                        },
+                        {
+                            "type": "boolean",
+                            "key": "tried_lifestyle",
+                            "content": "Has the patient tried lifestyle modifications?"
+                        }
+                    ]
+                }
+            };
+            document.getElementById('jsonInput').value = JSON.stringify(example, null, 2);
+        }
+
+        function loadDetailedExample() {
+            fetch('/sample_data/example_request.json')
+                .then(r => r.json())
+                .then(data => {
+                    document.getElementById('jsonInput').value = JSON.stringify(data, null, 2);
+                })
+                .catch(() => loadSimpleExample());
+        }
+
+        function clearForm() {
+            document.getElementById('jsonInput').value = '';
+            document.getElementById('resultsSection').classList.add('hidden');
+            document.getElementById('errorSection').classList.add('hidden');
+        }
+
+        async function submitForm() {
+            const jsonInput = document.getElementById('jsonInput').value;
+            const submitBtn = document.getElementById('submitBtn');
+            const loadingSection = document.getElementById('loadingSection');
+            const resultsSection = document.getElementById('resultsSection');
+            const errorSection = document.getElementById('errorSection');
+
+            // Hide previous results/errors
+            resultsSection.classList.add('hidden');
+            errorSection.classList.add('hidden');
+
+            // Validate JSON
+            let data;
+            try {
+                data = JSON.parse(jsonInput);
+            } catch (e) {
+                showError('Invalid JSON format. Please check your input.');
+                return;
+            }
+
+            // Show loading
+            loadingSection.classList.remove('hidden');
+            submitBtn.disabled = true;
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Failed to generate answers');
+                }
+
+                const result = await response.json();
+                displayResults(result);
+            } catch (error) {
+                showError(error.message);
+            } finally {
+                loadingSection.classList.add('hidden');
+                submitBtn.disabled = false;
+            }
+        }
+
+        function showError(message) {
+            const errorSection = document.getElementById('errorSection');
+            const errorMessage = document.getElementById('errorMessage');
+            errorMessage.textContent = message;
+            errorSection.classList.remove('hidden');
+        }
+
+        function displayResults(result) {
+            const resultsSection = document.getElementById('resultsSection');
+            const answersContainer = document.getElementById('answersContainer');
+            const totalCount = document.getElementById('totalCount');
+            const avgConfidence = document.getElementById('avgConfidence');
+
+            // Calculate stats
+            const answers = result.answers;
+            const avgConf = answers.reduce((sum, a) => sum + a.confidence, 0) / answers.length;
+
+            totalCount.textContent = answers.length;
+            avgConfidence.textContent = (avgConf * 100).toFixed(0) + '%';
+
+            // Clear previous results
+            answersContainer.innerHTML = '';
+
+            // Display each answer
+            answers.forEach((answer, index) => {
+                const card = createAnswerCard(answer, index + 1);
+                answersContainer.appendChild(card);
+            });
+
+            resultsSection.classList.remove('hidden');
+            resultsSection.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function createAnswerCard(answer, index) {
+            const confidence = answer.confidence;
+            const confidenceClass = confidence >= 0.7 ? 'high' : confidence >= 0.4 ? 'medium' : 'low';
+            const confidenceType = confidence >= 0.7 ? 'high-confidence' : confidence >= 0.4 ? 'medium-confidence' : 'low-confidence';
+
+            const card = document.createElement('div');
+            card.className = `answer-card ${confidenceType}`;
+            card.innerHTML = `
+                <div class="question-header">
+                    <div class="question-text">
+                        ${index}. ${answer.question.content}
+                    </div>
+                    <div class="question-type">${answer.question.type}</div>
+                </div>
+
+                <div class="answer-value">
+                    ${formatAnswerValue(answer.value)}
+                </div>
+
+                <div class="confidence-section">
+                    <div class="confidence-label">
+                        <span>Confidence</span>
+                        <strong>${(confidence * 100).toFixed(0)}%</strong>
+                    </div>
+                    <div class="confidence-bar">
+                        <div class="confidence-fill ${confidenceClass}" style="width: ${confidence * 100}%"></div>
+                    </div>
+                </div>
+
+                <div class="reasoning">
+                    <span class="reasoning-label">💡 Reasoning:</span>
+                    ${answer.reasoning}
+                </div>
+            `;
+
+            return card;
+        }
+
+        function formatAnswerValue(value) {
+            if (typeof value === 'boolean') {
+                return value ? '✅ Yes' : '❌ No';
+            }
+            return value;
+        }
+
+        // Load simple example on page load
+        window.addEventListener('DOMContentLoaded', loadSimpleExample);
+    </script>
+</body>
+</html>
+
