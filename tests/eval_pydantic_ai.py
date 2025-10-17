@@ -14,12 +14,13 @@ import os
 from pathlib import Path
 from typing import Any
 
+from fastapi.testclient import TestClient
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent
 from pydantic_ai.models.openai import OpenAIModel
 
 from app.env import get_openrouter_api_key, get_openrouter_model
-from app.main import get_answers
+from app.main import app
 from app.models import AnswerInput, Patient, Question, QuestionSet
 
 
@@ -88,8 +89,9 @@ class EvaluationMetrics:
 
 def load_test_cases() -> list[dict]:
     """Load evaluation test cases from JSON file."""
-    fixtures_path = Path(__file__).parent / "fixtures" / "eval_test_cases.json"
-    with open(fixtures_path) as f:
+    # Load from sample_data directory instead of fixtures
+    sample_data_path = Path(__file__).parent.parent / "sample_data" / "eval_test_cases.json"
+    with open(sample_data_path) as f:
         return json.load(f)
 
 
@@ -180,12 +182,16 @@ async def run_evaluation() -> EvaluationMetrics:
     agent = await create_evaluator_agent()
     print("✓ Evaluator ready\n")
 
+    # Create TestClient to call the actual HTTP endpoint
+    client = TestClient(app)
+
     test_cases = load_test_cases()
     metrics = EvaluationMetrics()
 
     for i, test_case in enumerate(test_cases, 1):
         case_name = test_case["name"]
         print(f"[{i}/{len(test_cases)}] Evaluating: {case_name}")
+        print()
 
         try:
             # Prepare request
@@ -194,9 +200,23 @@ async def run_evaluation() -> EvaluationMetrics:
             question_set = QuestionSet(name="Evaluation", questions=[question])
             request_data = AnswerInput(patient=patient, question_set=question_set)
 
-            # Generate answer
-            result = await get_answers(request_data)
-            answer = result.answers[0].model_dump()
+            # Call the actual /answers HTTP endpoint
+            response = client.post("/answers", json=request_data.model_dump())
+            
+            # Check for errors
+            if response.status_code != 200:
+                raise Exception(f"API returned {response.status_code}: {response.json()}")
+            
+            # Parse response
+            result = response.json()
+            answer = result["answers"][0]
+
+            # Print question and answer
+            print(f"  📋 Question: {question.content}")
+            print(f"  💬 Answer: {answer['value']}")
+            print(f"  🎯 Confidence: {answer['confidence']:.2f}")
+            print(f"  🧠 Reasoning: {answer['reasoning']}")
+            print()
 
             # Evaluate using Pydantic AI agent
             evaluation = await evaluate_answer(
@@ -214,13 +234,15 @@ async def run_evaluation() -> EvaluationMetrics:
             # Record result
             metrics.add_result(case_name, evaluation, passed)
 
-            # Print result
+            # Print evaluation result
             status = "✅ PASS" if passed else "❌ FAIL"
-            print(f"  {status} (Overall: {overall_score:.2f})")
-            print(f"  Accuracy: {evaluation.accuracy_score:.2f}")
-            print(f"  Confidence: {evaluation.confidence_appropriate:.2f}")
-            print(f"  Reasoning: {evaluation.reasoning_quality:.2f}")
-            print(f"  💡 {evaluation.explanation}")
+            print(f"  {status} (Overall Score: {overall_score:.2f})")
+            print(f"    • Accuracy: {evaluation.accuracy_score:.2f}")
+            print(f"    • Confidence Calibration: {evaluation.confidence_appropriate:.2f}")
+            print(f"    • Reasoning Quality: {evaluation.reasoning_quality:.2f}")
+            print(f"  📝 Evaluation: {evaluation.explanation}")
+            print()
+            print("-" * 80)
             print()
 
         except Exception as e:
@@ -233,6 +255,8 @@ async def run_evaluation() -> EvaluationMetrics:
                 explanation=f"Test execution failed: {str(e)}",
             )
             metrics.add_result(case_name, failed_eval, False)
+            print()
+            print("-" * 80)
             print()
 
     return metrics
