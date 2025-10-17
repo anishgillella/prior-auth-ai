@@ -1,37 +1,44 @@
-# Core Implementation Setup Guide
+# Setup & Usage Guide
 
-## What's Been Implemented
+Complete guide for setting up and running the Prior Authorization API.
 
-✅ **Core `/answers` endpoint** using OpenRouter with GPT-4o-mini
-- Extracts patient context from visit notes and prescription data
-- Answers both `text` and `boolean` type questions
-- **Uses Pydantic structured outputs** for type-safe, reliable responses
-- Handles errors gracefully with detailed error messages
+---
+
+## Prerequisites
+
+- Python 3.12+
+- `uv` package manager
+- OpenRouter API key (get from https://openrouter.ai)
+- Logfire account (optional, for observability)
+
+---
 
 ## Quick Start
 
 ### 1. Install Dependencies
 
 ```bash
+cd Anish-Gillella
 uv sync
+uv run pre-commit install
 ```
 
 ### 2. Configure Environment
 
-Create a `.env` file in the project root:
+Create `.env` file:
 
 ```bash
 # Required
-OPENROUTER_API_KEY=your_actual_openrouter_key_here
+OPENROUTER_API_KEY=your_key_here
+OPENROUTER_MODEL=openai/gpt-4o-mini
 
-# Optional (defaults to openai/gpt-4o-mini)
-OPENROUTER_MODEL=openai/gpt-5-mini
-
-# Optional: For observability
-LOGFIRE_TOKEN=your_logfire_token_here
+# Optional - for observability
+LOGFIRE_TOKEN=your_token_here
 ```
 
-**Get your OpenRouter API key:** https://openrouter.ai/keys
+Get your keys:
+- **OpenRouter:** https://openrouter.ai/keys
+- **Logfire:** https://logfire.pydantic.dev (free tier available)
 
 ### 3. Run the Server
 
@@ -39,164 +46,335 @@ LOGFIRE_TOKEN=your_logfire_token_here
 uv run uvicorn app.main:app --reload
 ```
 
-The API will be available at http://localhost:8000
-
-### 4. Test the Endpoint
-
-```bash
-curl -X POST "http://localhost:8000/answers" \
-  -H "Content-Type: application/json" \
-  -d @sample_data/example_request.json
-```
-
-Or visit the interactive docs at http://localhost:8000/docs
-
-### 5. Run Tests
-
-```bash
-uv run pytest
-```
-
-## Implementation Details
-
-### Architecture
-
-```
-POST /answers
-├── Validates API key
-├── Builds patient context string
-│   ├── Demographics
-│   ├── Prescription details
-│   └── Visit notes
-└── For each question:
-    ├── Builds type-specific prompt
-    ├── Calls OpenRouter (GPT-4o-mini) with Pydantic response_format
-    │   ├── TextAnswerResponse for text questions
-    │   └── BooleanAnswerResponse for boolean questions
-    └── Returns typed, validated response
-```
-
-### Why GPT-4o-mini with Pydantic Structured Outputs?
-
-- **Type-safe**: Pydantic models ensure responses always match expected schema
-- **Reliable**: No parsing errors or format inconsistencies
-- **Cost-effective**: GPT-4o-mini is affordable at ~$0.15/1M input tokens
-- **Fast**: Low latency for better UX
-- **Developer-friendly**: Models are defined once and reused for validation
-
-### Current Limitations (TODOs for Extras)
-
-- ❌ No `visible_if` condition handling
-- ❌ No confidence scores
-- ❌ No prompt optimization (few-shot, actor-critic)
-- ❌ No evaluation pipeline
-
-## Extras Implemented
-
-### 1. Few-Shot Prompting ✅
-
-Improved answer quality by providing examples in prompts.
-
-**Files:**
-- `app/examples.py` - Few-shot example library
-- `app/main.py` - Updated to use examples
-
-**How it works:**
-- 3 examples each for text and boolean questions
-- Examples show appropriate confidence levels
-- Demonstrates proper reasoning format
-
-**Result:** Better consistency and citation of evidence.
-
-### 2. Evaluation Pipeline ✅
-
-Automated testing using **Pydantic AI** to measure answer quality.
-
-**Files:**
-- `tests/eval_pydantic_ai.py` - Pydantic AI evaluation framework
-- `tests/fixtures/eval_test_cases.json` - Test cases with expected answers
-
-**Run evaluation:**
-```bash
-uv run python tests/eval_pydantic_ai.py
-```
-
-**What Pydantic AI evaluates:**
-- **Accuracy:** Is the answer correct given patient data?
-- **Confidence Calibration:** Is the confidence score appropriate?
-- **Reasoning Quality:** Does it cite specific evidence?
-- **Overall Score:** Composite metric across all three
-
-**Uses an LLM as the evaluator** - sophisticated assessment of answer quality.
-
-### 3. Logfire Integration ✅
-
-Full observability and monitoring.
-
-**Setup:**
-1. Sign up at https://logfire.pydantic.dev/
-2. Add token to `.env`:
-   ```bash
-   LOGFIRE_TOKEN=your_token_here
-   ```
-
-3. Logfire automatically instruments:
-   - FastAPI requests
-   - OpenAI LLM calls
-   - Custom spans for each question
-
-**View dashboard:** https://logfire-us.pydantic.dev/
-
-**What you can see:**
-- Request traces and latency
-- Confidence score distributions
-- Token usage per call
-- Error tracking
-
-### 4. Confidence Scores ✅
-
-Already implemented in core! Each answer includes:
-- `confidence`: 0.0-1.0 score
-- `reasoning`: Explanation citing evidence
+Server runs at: **http://localhost:8000**
 
 ---
 
-## Running Evaluations
+## Testing
 
-### Quick Evaluation (6 test cases)
-
-```bash
-uv run python tests/eval_pydantic_ai.py
-```
-
-**Output:**
-- Pydantic AI agent evaluates each answer
-- Accuracy, confidence calibration, and reasoning quality scores
-- Detailed explanations from the evaluator
-- Summary statistics and overall grade
-
-**Note:** No server needed - calls API functions directly
-
-### Full Test Suite (40+ questions)
-
+### Run Integration Tests
 ```bash
 uv run pytest tests/test_answers.py -v -s
 ```
 
-Shows detailed output for all Zepbound questions with the full patient data.
+### Run Evaluation Pipeline
+```bash
+uv run python tests/eval_pydantic_ai.py
+```
+
+**What it tests:**
+- 9 test cases including adversarial attacks
+- Pydantic AI evaluates accuracy, confidence, reasoning
+- Results: ~77% pass rate with detailed feedback
 
 ---
 
-## Performance Metrics
+## Using the Application
 
-**Current Performance (with few-shot prompting):**
-- ~2-3 seconds per question
-- ~60-80 seconds for full 40-question form (sequential)
-- 83.3% pass rate on evaluation tests
-- Average confidence: 0.80
+### 1. Main UI (Answer Generation)
 
-**Cost Estimate:**
-- ~$0.0001-0.0002 per question
-- ~$0.004-0.008 per complete prior auth form
-- Few-shot overhead: ~30% more tokens but better quality
+**URL:** http://localhost:8000
 
+**Features:**
+- Click "Simple Example" or "Detailed Example" to load sample data
+- Click "Generate Answers" to see AI-generated responses
+- View confidence scores and reasoning for each answer
+
+### 2. Annotation UI (Clinical Review)
+
+**URL:** http://localhost:8000/annotate
+
+**Features:**
+- Clinical staff can review AI-generated answers
+- Three actions: Approve ✓ / Reject ✗ / Correct ✎
+- Annotations saved to `sample_data/annotations.json`
+- View recent annotation history
+
+**Use Case:** Quality assurance and human feedback loop
+
+### 3. API Documentation
+
+**Swagger UI:** http://localhost:8000/docs  
+**ReDoc:** http://localhost:8000/redoc
+
+---
+
+## API Endpoints
+
+### POST /answers
+Generate answers to prior authorization questions.
+
+**Request:**
+```json
+{
+  "patient": {
+    "first_name": "John",
+    "last_name": "Doe",
+    "date_of_birth": "1970-01-01",
+    "gender": "Male",
+    "prescription": {
+      "medication": "Zepbound",
+      "dosage": "5 mg",
+      "frequency": "once weekly",
+      "duration": "ongoing"
+    },
+    "visit_notes": ["Patient has BMI of 37.4..."]
+  },
+  "question_set": {
+    "name": "Prior Auth",
+    "questions": [
+      {
+        "type": "text",
+        "key": "patient_bmi",
+        "content": "What is the patient's BMI?"
+      }
+    ]
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "answers": [
+    {
+      "question": {...},
+      "value": "37.4 kg/m²",
+      "confidence": 1.0,
+      "reasoning": "BMI is explicitly stated in visit notes..."
+    }
+  ]
+}
+```
+
+### POST /annotations
+Submit clinical staff review.
+
+### GET /annotations
+Retrieve annotations (filterable by reviewer/status).
+
+---
+
+## Architecture Overview
+
+```
+HTTP Request → FastAPI Endpoint
+                    ↓
+            Answer Service
+                    ↓
+         Few-Shot Prompting → LLM
+                    ↓
+         Initial Answer Generated
+                    ↓
+    Confidence < 0.7? → Actor-Critic Refinement
+                    ↓
+         Return Final Answer
+                    ↓
+       Frontend Displays Results
+                    ↓
+  Clinical Staff Reviews (Annotation UI)
+                    ↓
+    Feedback Stored for Improvement
+```
+
+---
+
+## Features Implemented
+
+### Core Requirements ✅
+- `/answers` endpoint with LLM integration
+- Pydantic structured outputs (type-safe)
+- Patient context extraction
+- Efficient modular architecture
+
+### AI Engineer Extras ✅
+1. **Few-Shot Prompting** - 6 examples for consistency
+2. **Actor-Critic System** - Auto-refines low-confidence answers (< 0.7)
+3. **Eval Pipeline** - Pydantic AI with 9 test cases
+4. **Confidence Scores** - With reasoning for every answer
+5. **Annotation UI** - Clinical staff review system
+
+### Additional Features ✅
+- Frontend demo UI
+- Logfire observability
+- Security testing (adversarial)
+- Comprehensive documentation
+
+---
+
+## AI Engineer Extras Details
+
+### 1. Few-Shot Prompting
+**Location:** `app/examples.py`
+
+Provides 6 examples (3 text, 3 boolean) showing:
+- Proper answer format
+- Confidence calibration (1.0 for explicit, 0.0 for missing)
+- Evidence citation
+
+### 2. Actor-Critic System  
+**Location:** `app/actor_critic.py`
+
+**How it works:**
+- Triggers automatically when confidence < 0.7
+- Critic evaluates initial answer and provides feedback
+- Actor regenerates improved answer
+- Tracks improvement in Logfire
+
+**Example:** Missing BMI info improved from 0.0 → 0.9 confidence
+
+### 3. Evaluation Pipeline
+**Location:** `tests/eval_pydantic_ai.py`
+
+Uses Pydantic AI to evaluate:
+- Accuracy (is answer correct?)
+- Confidence calibration (is confidence appropriate?)
+- Reasoning quality (cites evidence?)
+
+**Test cases include:**
+- Explicit information
+- Missing data
+- Multi-step calculations
+- Contradictory info
+- Adversarial jailbreak attempts
+
+### 4. Annotation UI
+**Location:** `frontend/annotate.html`, `app/annotations.py`
+
+Clinical staff can:
+- Review AI answers
+- Approve/Reject/Correct
+- Add review notes
+- Track annotation history
+
+Stored in: `sample_data/annotations.json`
+
+---
+
+## Project Structure
+
+```
+app/
+├── main.py              # API endpoints (clean, focused)
+├── answer_service.py    # Answer generation logic
+├── actor_critic.py      # Critic & refinement system
+├── annotations.py       # Clinical review handling
+├── models.py            # Pydantic data models
+├── examples.py          # Few-shot examples
+└── env.py              # Configuration
+
+frontend/
+├── index.html          # Main demo UI
+└── annotate.html       # Annotation UI
+
+tests/
+├── test_answers.py     # Integration tests
+└── eval_pydantic_ai.py # Evaluation pipeline
+
+sample_data/
+├── patient_data.json
+├── zepbound_question_set.json
+├── eval_test_cases.json
+└── annotations.json    # Generated at runtime
+```
+
+---
+
+## Monitoring with Logfire
+
+View real-time metrics:
+- Request traces
+- LLM call performance
+- Confidence score distributions
+- Actor-critic invocations
+- Error rates
+
+**Dashboard:** https://logfire-us.pydantic.dev/
+
+---
+
+## Common Issues
+
+### Server won't start
+```bash
+# Check if port 8000 is in use
+lsof -i :8000
+
+# Use different port
+uv run uvicorn app.main:app --port 8001
+```
+
+### API Key not working
+```bash
+# Verify .env file exists
+cat .env
+
+# Check key is loaded
+uv run python -c "from app.env import get_openrouter_api_key; print(get_openrouter_api_key())"
+```
+
+### Tests failing
+```bash
+# Ensure dependencies are installed
+uv sync
+
+# Check API key is set
+grep OPENROUTER_API_KEY .env
+```
+
+---
+
+## Development
+
+### Run with hot reload
+```bash
+uv run uvicorn app.main:app --reload
+```
+
+### Format code
+```bash
+uv run ruff format .
+```
+
+### Lint code
+```bash
+uv run pre-commit run --all-files
+```
+
+---
+
+## Performance
+
+- **Avg response time:** 2-3 seconds per question
+- **Simple case (3 questions):** ~5 seconds total
+- **Complex case (40 questions):** ~60-80 seconds
+- **Actor-critic overhead:** +2-3 seconds when triggered
+
+**Optimization opportunities:**
+- Parallel question processing (currently sequential)
+- Caching for repeated questions
+- Streaming responses
+
+---
+
+## Security Considerations
+
+- **Jailbreak Testing:** Included in evaluation
+- **Finding:** Model partially vulnerable to prompt injection
+- **Mitigation:** Input validation, system prompt hardening (future work)
+- **API Keys:** Never commit to git (.env in .gitignore)
+
+---
+
+## Cost Estimation
+
+Using `gpt-4o-mini` via OpenRouter:
+- **Simple form (3 questions):** ~$0.001-0.002
+- **Full form (40 questions):** ~$0.004-0.008
+- **With actor-critic:** +20% cost when triggered
+
+**Monthly estimate (1000 forms):** ~$4-8
+
+---
+
+For questions or issues, refer to `CHALLENGES.md` for detailed technical decisions and problem-solving approaches.
