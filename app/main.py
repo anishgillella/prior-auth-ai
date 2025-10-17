@@ -1,3 +1,11 @@
+"""
+FastAPI application for Prior Authorization Answer Generation.
+
+This API provides endpoints for:
+- Generating answers to prior authorization questions using LLMs
+- Clinical staff annotation and review of generated answers
+"""
+
 from pathlib import Path
 
 import logfire
@@ -7,34 +15,35 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from openai import AsyncOpenAI
 
-from app.env import get_openrouter_api_key, get_openrouter_model, setup_env
-from app.examples import format_few_shot_examples
+from app.annotations import create_annotation, get_annotations
+from app.answer_service import answer_question, build_patient_context
+from app.env import get_openrouter_api_key, setup_env
 
 from .models import (
+    Annotation,
+    AnnotationInput,
+    AnnotationList,
     Answer,
     AnswerInput,
     AnswerOutput,
-    BooleanAnswerResponse,
-    TextAnswerResponse,
 )
 
 setup_env()
 
 # Configure Logfire for observability
 logfire.configure()
-logfire.instrument_openai(AsyncOpenAI)
 
-# Initialize the FastAPI application
+# Initialize FastAPI app
 app = FastAPI(
     title="Pharmacy Prior Authorization API",
     description="API for generating answers to prior authorization questions using patient data",
     version="1.0.0",
 )
 
-# Add CORS middleware to allow frontend access
+# CORS middleware for frontend access
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify exact origins
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -43,26 +52,27 @@ app.add_middleware(
 # Instrument FastAPI with Logfire
 logfire.instrument_fastapi(app)
 
-# Get project root directory
+# Mount static files
 BASE_DIR = Path(__file__).resolve().parent.parent
-
-# Mount static files for frontend
 app.mount(
     "/sample_data",
     StaticFiles(directory=str(BASE_DIR / "sample_data")),
     name="sample_data",
 )
 
-# Initialize OpenRouter client (OpenAI-compatible)
+# Initialize OpenRouter client
 openrouter_client = AsyncOpenAI(
     base_url="https://openrouter.ai/api/v1",
     api_key=get_openrouter_api_key(),
 )
 
+# Instrument OpenAI client with Logfire
+logfire.instrument_openai(AsyncOpenAI)
+
 
 @app.get("/")
 async def root():
-    """Serve the frontend UI."""
+    """Serve the main frontend application."""
     frontend_path = BASE_DIR / "frontend" / "index.html"
     if frontend_path.exists():
         return FileResponse(frontend_path)
@@ -94,165 +104,43 @@ async def apple_touch_icon():
     return {}
 
 
-def build_patient_context(patient) -> str:
-    """Build a comprehensive patient context string for the LLM."""
-    context = f"""Patient Information:
-- Name: {patient.first_name} {patient.last_name}
-- Date of Birth: {patient.date_of_birth}
-- Gender: {patient.gender}
-
-Current Prescription:
-- Medication: {patient.prescription.medication}
-- Dosage: {patient.prescription.dosage}
-- Frequency: {patient.prescription.frequency}
-- Duration: {patient.prescription.duration}
-
-Visit Notes:
-"""
-    for i, note in enumerate(patient.visit_notes, 1):
-        context += f"{i}. {note}\n"
-
-    return context
-
-
-async def answer_question(
-    patient_context: str, question
-) -> tuple[str | bool, float, str]:
-    """
-    Use LLM with Pydantic structured outputs to answer a single question based on patient context.
-    Uses few-shot prompting to improve answer quality.
-
-    Args:
-        patient_context: Formatted string with patient information
-        question: Question object with type, key, and content
-
-    Returns:
-        Tuple of (answer_value, confidence, reasoning)
-    """
-    model = get_openrouter_model()
-
-    # Start Logfire span for tracking
-    with logfire.span(
-        "answer_question",
-        question_key=question.key,
-        question_type=question.type,
-        model=model,
-    ):
-        # Determine the appropriate response model based on question type
-        if question.type == "boolean":
-            # Get few-shot examples for boolean questions
-            few_shot_examples = format_few_shot_examples("boolean")
-
-            system_prompt = f"""You are a medical assistant helping to complete prior authorization forms.
-Answer the question based on the provided patient information.
-Provide a true or false answer with confidence score and reasoning.
-
-{few_shot_examples}"""
-
-            user_prompt = f"""{patient_context}
-
-Question: {question.content}
-
-Based on the patient information above, determine if the answer is true or false.
-Provide your confidence level and explain your reasoning."""
-
-            response_model = BooleanAnswerResponse
-
-        else:
-            # Text question - get few-shot examples
-            few_shot_examples = format_few_shot_examples("text")
-
-            system_prompt = f"""You are a medical assistant helping to complete prior authorization forms.
-Answer the question based on the provided patient information.
-Be concise and specific. Provide confidence score and reasoning.
-
-{few_shot_examples}"""
-
-            user_prompt = f"""{patient_context}
-
-Question: {question.content}
-
-Provide a concise, specific answer based on the patient information.
-Include your confidence level and explain your reasoning."""
-
-            response_model = TextAnswerResponse
-
-        try:
-            # Use OpenAI's structured output feature with Pydantic models
-            # This ensures type-safe responses that always match our schema
-            completion = await openrouter_client.beta.chat.completions.parse(
-                model=model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-                response_format=response_model,
-                temperature=0.3,  # Lower temperature for more consistent/factual responses
-                max_tokens=500,  # Sufficient for gpt-4o-mini (no reasoning token overhead)
-            )
-
-            # Extract the parsed Pydantic model - already validated!
-            parsed_response = completion.choices[0].message.parsed
-
-            # Log answer metrics to Logfire
-            logfire.info(
-                "answer_generated",
-                question_key=question.key,
-                answer_type=type(parsed_response.answer).__name__,
-                confidence=parsed_response.confidence,
-                has_reasoning=bool(parsed_response.reasoning),
-            )
-
-            return (
-                parsed_response.answer,
-                parsed_response.confidence,
-                parsed_response.reasoning,
-            )
-
-        except Exception as e:
-            logfire.error(
-                "answer_generation_failed",
-                question_key=question.key,
-                error=str(e),
-            )
-            raise HTTPException(
-                status_code=500,
-                detail=f"Error generating answer for question '{question.key}': {str(e)}",
-            ) from e
-
-
 @app.post("/answers")
 async def get_answers(data: AnswerInput) -> AnswerOutput:
     """
-    Generate answers to prior authorization questions based on patient data.
+    Generate answers to prior authorization questions using patient data.
 
-    This endpoint accepts patient information and a list of questions,
-    then uses LLM to generate appropriate answers based on the patient's
-    medical history, current medications, and other relevant data.
+    This endpoint:
+    1. Extracts patient information and questions from the request
+    2. Uses LLM with few-shot prompting to generate answers
+    3. Applies actor-critic refinement for low-confidence answers
+    4. Returns structured answers with confidence scores and reasoning
+
+    Args:
+        data: Patient information and question set
+
+    Returns:
+        AnswerOutput with list of answers including confidence and reasoning
     """
-    # Validate API key is set
     if not get_openrouter_api_key():
         raise HTTPException(
             status_code=500,
             detail="OPENROUTER_API_KEY not configured. Please set it in your .env file.",
         )
 
-    # Track the entire request with Logfire
     with logfire.span(
         "generate_all_answers",
         patient_name=f"{data.patient.first_name} {data.patient.last_name}",
         question_count=len(data.question_set.questions),
         medication=data.patient.prescription.medication,
     ):
-        # Build patient context once
+        # Build patient context once for all questions
         patient_context = build_patient_context(data.patient)
 
         # Generate answers for each question
         answers = []
         for question in data.question_set.questions:
-            # TODO: Handle visible_if conditions in future iteration
             answer_value, confidence, reasoning = await answer_question(
-                patient_context, question
+                openrouter_client, patient_context, question, use_actor_critic=True
             )
             answers.append(
                 Answer(
@@ -263,7 +151,7 @@ async def get_answers(data: AnswerInput) -> AnswerOutput:
                 )
             )
 
-        # Log summary statistics
+        # Log completion metrics
         avg_confidence = sum(a.confidence for a in answers) / len(answers)
         logfire.info(
             "answers_complete",
@@ -273,3 +161,52 @@ async def get_answers(data: AnswerInput) -> AnswerOutput:
         )
 
         return AnswerOutput(answers=answers)
+
+
+@app.post("/annotations", response_model=Annotation)
+async def create_annotation_endpoint(annotation_input: AnnotationInput) -> Annotation:
+    """
+    Create a new annotation for clinical staff review.
+
+    This endpoint allows clinical staff to review AI-generated answers and provide feedback:
+    - **Approve**: Answer is correct
+    - **Reject**: Answer is incorrect
+    - **Correct**: Answer needs modification (provide corrected answer)
+
+    Args:
+        annotation_input: Annotation data from clinical staff
+
+    Returns:
+        Created annotation with unique ID and timestamp
+    """
+    return create_annotation(annotation_input)
+
+
+@app.get("/annotations", response_model=AnnotationList)
+async def get_annotations_endpoint(
+    reviewer_id: str | None = None,
+    status: str | None = None,
+    limit: int = 100,
+) -> AnnotationList:
+    """
+    Retrieve annotations with optional filtering.
+
+    Query parameters:
+    - **reviewer_id**: Filter by reviewer
+    - **status**: Filter by status (approved/rejected/corrected)
+    - **limit**: Maximum number of annotations to return (default: 100)
+
+    Returns:
+        List of annotations matching the filters
+    """
+    annotations, total = get_annotations(reviewer_id, status, limit)
+    return AnnotationList(annotations=annotations, total=total)
+
+
+@app.get("/annotate")
+async def annotation_ui():
+    """Serve the annotation UI for clinical staff."""
+    ui_path = BASE_DIR / "frontend" / "annotate.html"
+    if ui_path.exists():
+        return FileResponse(ui_path)
+    return {"message": "Annotation UI not found"}

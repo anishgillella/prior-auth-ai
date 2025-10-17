@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clinical Staff Annotation - Prior Authorization Review</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: #667eea;
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .reviewer-section {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .reviewer-input {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .reviewer-input label {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .reviewer-input input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+        }
+
+        .load-btn {
+            padding: 12px 30px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .load-btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+
+        .content-area {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .panel {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        }
+
+        .panel h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .answer-card {
+            background: #f8f9ff;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+        }
+
+        .question-text {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 1.05em;
+        }
+
+        .answer-value {
+            font-size: 1.1em;
+            color: #667eea;
+            font-weight: 600;
+            margin: 10px 0;
+        }
+
+        .confidence-bar {
+            margin: 10px 0;
+        }
+
+        .confidence-label {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .bar {
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .bar-fill {
+            height: 100%;
+            transition: width 0.5s;
+        }
+
+        .bar-fill.high { background: #10b981; }
+        .bar-fill.medium { background: #f59e0b; }
+        .bar-fill.low { background: #ef4444; }
+
+        .reasoning {
+            background: white;
+            padding: 12px;
+            border-radius: 8px;
+            color: #555;
+            font-size: 0.95em;
+            margin-top: 10px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .review-form {
+            background: #f8f9ff;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 15px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .status-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .status-btn {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .status-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .status-btn.approved {
+            border-color: #10b981;
+            color: #10b981;
+        }
+
+        .status-btn.approved.active {
+            background: #10b981;
+            color: white;
+        }
+
+        .status-btn.rejected {
+            border-color: #ef4444;
+            color: #ef4444;
+        }
+
+        .status-btn.rejected.active {
+            background: #ef4444;
+            color: white;
+        }
+
+        .status-btn.corrected {
+            border-color: #f59e0b;
+            color: #f59e0b;
+        }
+
+        .status-btn.corrected.active {
+            background: #f59e0b;
+            color: white;
+        }
+
+        .form-group input, .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            font-family: inherit;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 15px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.1em;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .submit-btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+
+        .submit-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .annotations-list {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .annotation-item {
+            background: #f8f9ff;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+        }
+
+        .annotation-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .annotation-status {
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        .annotation-status.approved {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .annotation-status.rejected {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .annotation-status.corrected {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .timestamp {
+            font-size: 0.85em;
+            color: #666;
+        }
+
+        .message {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .message.success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .message.error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+
+        .empty-state-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏥 Clinical Staff Annotation System</h1>
+            <p class="subtitle">Review and provide feedback on AI-generated prior authorization answers</p>
+        </div>
+
+        <div class="reviewer-section">
+            <div class="reviewer-input">
+                <label for="reviewerId">Reviewer ID:</label>
+                <input type="text" id="reviewerId" placeholder="Enter your reviewer ID (e.g., dr.smith)" value="dr.smith">
+                <button class="load-btn" onclick="loadSampleAnswer()">Load Sample Answer to Review</button>
+            </div>
+        </div>
+
+        <div id="message" class="message hidden"></div>
+
+        <div class="content-area">
+            <!-- Left Panel: Answer to Review -->
+            <div class="panel">
+                <h2>📋 Answer Under Review</h2>
+                <div id="reviewArea">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📝</div>
+                        <p>Click "Load Sample Answer" to begin reviewing</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel: Past Annotations -->
+            <div class="panel">
+                <h2>📊 Recent Annotations</h2>
+                <div id="annotationsList" class="annotations-list">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📚</div>
+                        <p>No annotations yet</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentAnswer = null;
+
+        // Sample answer for demonstration
+        const sampleAnswer = {
+            patient_name: "John Doe",
+            question_key: "patient_bmi",
+            question_content: "What is the patient's BMI?",
+            original_answer: "37.4 kg/m²",
+            original_confidence: 1.0,
+            original_reasoning: "BMI is explicitly stated in the visit notes as 37.4 kg/m²."
+        };
+
+        function loadSampleAnswer() {
+            currentAnswer = sampleAnswer;
+            displayAnswerForReview(sampleAnswer);
+            loadAnnotations();
+        }
+
+        function displayAnswerForReview(answer) {
+            const confidenceClass = answer.original_confidence >= 0.7 ? 'high' : answer.original_confidence >= 0.4 ? 'medium' : 'low';
+            
+            const html = `
+                <div class="answer-card">
+                    <div class="question-text">${answer.question_content}</div>
+                    <div class="answer-value">Answer: ${answer.original_answer}</div>
+                    
+                    <div class="confidence-bar">
+                        <div class="confidence-label">Confidence: ${(answer.original_confidence * 100).toFixed(0)}%</div>
+                        <div class="bar">
+                            <div class="bar-fill ${confidenceClass}" style="width: ${answer.original_confidence * 100}%"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="reasoning">
+                        <strong>Reasoning:</strong> ${answer.original_reasoning}
+                    </div>
+                </div>
+
+                <div class="review-form">
+                    <div class="form-group">
+                        <label>Review Status:</label>
+                        <div class="status-buttons">
+                            <button class="status-btn approved" onclick="setStatus('approved')">✓ Approve</button>
+                            <button class="status-btn rejected" onclick="setStatus('rejected')">✗ Reject</button>
+                            <button class="status-btn corrected" onclick="setStatus('corrected')">✎ Correct</button>
+                        </div>
+                    </div>
+
+                    <div id="correctedAnswerGroup" class="form-group hidden">
+                        <label for="correctedAnswer">Corrected Answer:</label>
+                        <input type="text" id="correctedAnswer" placeholder="Enter the correct answer">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="notes">Review Notes:</label>
+                        <textarea id="notes" placeholder="Add your review notes, feedback, or observations..."></textarea>
+                    </div>
+
+                    <button class="submit-btn" onclick="submitAnnotation()">Submit Review</button>
+                </div>
+            `;
+
+            document.getElementById('reviewArea').innerHTML = html;
+        }
+
+        let selectedStatus = null;
+
+        function setStatus(status) {
+            selectedStatus = status;
+            
+            // Update button states
+            document.querySelectorAll('.status-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelector(`.status-btn.${status}`).classList.add('active');
+            
+            // Show/hide corrected answer field
+            const correctedGroup = document.getElementById('correctedAnswerGroup');
+            if (status === 'corrected') {
+                correctedGroup.classList.remove('hidden');
+            } else {
+                correctedGroup.classList.add('hidden');
+            }
+        }
+
+        async function submitAnnotation() {
+            if (!selectedStatus) {
+                showMessage('Please select a review status', 'error');
+                return;
+            }
+
+            const reviewerId = document.getElementById('reviewerId').value.trim();
+            const notes = document.getElementById('notes').value.trim();
+
+            if (!reviewerId) {
+                showMessage('Please enter your reviewer ID', 'error');
+                return;
+            }
+
+            if (!notes) {
+                showMessage('Please provide review notes', 'error');
+                return;
+            }
+
+            const annotation = {
+                reviewer_id: reviewerId,
+                patient_name: currentAnswer.patient_name,
+                question_key: currentAnswer.question_key,
+                question_content: currentAnswer.question_content,
+                original_answer: currentAnswer.original_answer,
+                original_confidence: currentAnswer.original_confidence,
+                original_reasoning: currentAnswer.original_reasoning,
+                status: selectedStatus,
+                corrected_answer: selectedStatus === 'corrected' ? document.getElementById('correctedAnswer').value : null,
+                notes: notes
+            };
+
+            try {
+                const response = await fetch('/annotations', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(annotation)
+                });
+
+                if (response.ok) {
+                    showMessage('✓ Annotation submitted successfully!', 'success');
+                    
+                    // Reset form
+                    document.getElementById('notes').value = '';
+                    if (selectedStatus === 'corrected') {
+                        document.getElementById('correctedAnswer').value = '';
+                    }
+                    selectedStatus = null;
+                    document.querySelectorAll('.status-btn').forEach(btn => btn.classList.remove('active'));
+                    document.getElementById('correctedAnswerGroup').classList.add('hidden');
+                    
+                    // Reload annotations
+                    loadAnnotations();
+                } else {
+                    showMessage('Error submitting annotation', 'error');
+                }
+            } catch (error) {
+                showMessage('Network error: ' + error.message, 'error');
+            }
+        }
+
+        async function loadAnnotations() {
+            try {
+                const response = await fetch('/annotations?limit=10');
+                const data = await response.json();
+
+                if (data.annotations && data.annotations.length > 0) {
+                    const html = data.annotations.map(ann => `
+                        <div class="annotation-item">
+                            <div class="annotation-header">
+                                <span class="annotation-status ${ann.status}">${ann.status.toUpperCase()}</span>
+                                <span class="timestamp">${new Date(ann.timestamp).toLocaleString()}</span>
+                            </div>
+                            <div class="question-text">${ann.question_content}</div>
+                            <div><strong>Original:</strong> ${ann.original_answer}</div>
+                            ${ann.corrected_answer ? `<div><strong>Corrected:</strong> ${ann.corrected_answer}</div>` : ''}
+                            <div style="margin-top: 10px; color: #666;"><em>${ann.notes}</em></div>
+                            <div style="margin-top: 5px; font-size: 0.85em; color: #888;">by ${ann.reviewer_id}</div>
+                        </div>
+                    `).join('');
+
+                    document.getElementById('annotationsList').innerHTML = html;
+                } else {
+                    document.getElementById('annotationsList').innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📚</div>
+                            <p>No annotations yet</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading annotations:', error);
+            }
+        }
+
+        function showMessage(text, type) {
+            const msg = document.getElementById('message');
+            msg.textContent = text;
+            msg.className = `message ${type}`;
+            setTimeout(() => {
+                msg.classList.add('hidden');
+            }, 5000);
+        }
+
+        // Load annotations on page load
+        loadAnnotations();
+    </script>
+</body>
+</html>
+
