@@ -5,8 +5,12 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.models import AnswerInput, Patient, Question, QuestionSet
+from app.token_utils import TokenTracker, calculate_cost, count_tokens
 
 client = TestClient(app)
+
+# Global token tracker
+token_tracker = TokenTracker()
 
 
 def print_test_header(test_name, description=""):
@@ -18,8 +22,8 @@ def print_test_header(test_name, description=""):
     print(f"{'═' * 80}\n")
 
 
-def print_answers(result, show_reasoning=True):
-    """Print formatted answers."""
+def print_answers(result, request_data=None, show_reasoning=True):
+    """Print formatted answers with token tracking."""
     print(f"{'─' * 80}")
     print(f"📊 Generated {len(result['answers'])} answers")
     print(f"{'─' * 80}\n")
@@ -50,6 +54,22 @@ def print_answers(result, show_reasoning=True):
             print(f"   🧠 Reasoning: {reasoning}")
 
         print()
+
+    # Calculate and display token usage if request_data provided
+    if request_data:
+        input_tokens = count_tokens(request_data)
+        output_tokens = count_tokens(result)
+        cost = calculate_cost(input_tokens, output_tokens)
+        token_tracker.add_usage(input_tokens, output_tokens)
+
+        # Print stats for this test
+        print(f"{'─' * 80}")
+        print("📊 Token Usage:")
+        print(f"   📥 Input:  {input_tokens:,} tokens")
+        print(f"   📤 Output: {output_tokens:,} tokens")
+        print(f"   🔢 Total:  {input_tokens + output_tokens:,} tokens")
+        print(f"   💰 Cost:   ${cost:.4f}")
+        print(f"{'─' * 80}\n")
 
 
 # Fixtures
@@ -116,7 +136,8 @@ def test_detailed_patient(detailed_patient_data):
         "Full patient record with complete Zepbound prior auth questions",
     )
 
-    response = client.post("/answers", json=detailed_patient_data.model_dump())
+    request_data = detailed_patient_data.model_dump()
+    response = client.post("/answers", json=request_data)
 
     if response.status_code != 200:
         print(f"\n❌ Error response: {response.json()}")
@@ -126,7 +147,7 @@ def test_detailed_patient(detailed_patient_data):
     assert "answers" in result
     assert len(result["answers"]) > 0
 
-    print_answers(result, show_reasoning=True)
+    print_answers(result, request_data=request_data, show_reasoning=True)
 
     # Check for high confidence answers
     high_conf_count = sum(1 for a in result["answers"] if a["confidence"] >= 0.7)
@@ -140,12 +161,13 @@ def test_simple_explicit_info(simple_patient_data):
         "Clear, straightforward patient data - should have high confidence",
     )
 
-    response = client.post("/answers", json=simple_patient_data.model_dump())
+    request_data = simple_patient_data.model_dump()
+    response = client.post("/answers", json=request_data)
 
     assert response.status_code == 200
     result = response.json()
 
-    print_answers(result, show_reasoning=True)
+    print_answers(result, request_data=request_data, show_reasoning=True)
 
     # Should have high confidence since info is explicit
     for answer in result["answers"]:
@@ -161,12 +183,13 @@ def test_actor_critic_refinement(actor_critic_data):
         "Ambiguous patient data that triggers automatic answer refinement",
     )
 
-    response = client.post("/answers", json=actor_critic_data.model_dump())
+    request_data = actor_critic_data.model_dump()
+    response = client.post("/answers", json=request_data)
 
     assert response.status_code == 200
     result = response.json()
 
-    print_answers(result, show_reasoning=True)
+    print_answers(result, request_data=request_data, show_reasoning=True)
 
     # Check if any answers were refined
     refined_count = sum(
@@ -215,12 +238,13 @@ def test_missing_information():
         ),
     )
 
-    response = client.post("/answers", json=data.model_dump())
+    request_data = data.model_dump()
+    response = client.post("/answers", json=request_data)
 
     assert response.status_code == 200
     result = response.json()
 
-    print_answers(result, show_reasoning=True)
+    print_answers(result, request_data=request_data, show_reasoning=True)
 
     # Should have low confidence or explicit "not available" answers
     low_conf_count = sum(1 for a in result["answers"] if a["confidence"] < 0.3)
@@ -276,12 +300,13 @@ def test_boolean_questions():
         ),
     )
 
-    response = client.post("/answers", json=data.model_dump())
+    request_data = data.model_dump()
+    response = client.post("/answers", json=request_data)
 
     assert response.status_code == 200
     result = response.json()
 
-    print_answers(result, show_reasoning=True)
+    print_answers(result, request_data=request_data, show_reasoning=True)
 
     # Should have mix of True/False answers
     true_count = sum(1 for a in result["answers"] if a["value"] is True)
@@ -303,7 +328,7 @@ def test_health_endpoint():
 
 # Run all tests with summary
 def test_summary(detailed_patient_data, simple_patient_data, actor_critic_data):
-    """Print final test summary."""
+    """Print final test summary with cumulative token stats."""
     print(f"\n{'═' * 80}")
     print("🎉 ALL TESTS COMPLETED!")
     print(f"{'═' * 80}\n")
@@ -314,4 +339,8 @@ def test_summary(detailed_patient_data, simple_patient_data, actor_critic_data):
     print("   4. Missing Information (low confidence)")
     print("   5. Boolean Questions (mixed answers)")
     print("   6. Health Check")
+
+    # Print cumulative token statistics
+    token_tracker.print_summary()
+
     print(f"\n{'═' * 80}\n")
