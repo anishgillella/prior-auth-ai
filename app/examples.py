@@ -1,7 +1,10 @@
 """
 Few-shot examples for prompt optimization.
 
-These examples demonstrate high-quality answers for the LLM to learn from.
+These examples demonstrate high-quality answers covering different scenarios:
+- Explicit information (high confidence)
+- Missing information (low confidence)
+- Ambiguous information (medium confidence)
 """
 
 # Few-shot examples for text questions
@@ -25,21 +28,6 @@ Visit Notes:
             "answer": "37.4 kg/m²",
             "confidence": 1.0,
             "reasoning": "BMI is explicitly stated in the visit notes as 37.4 kg/m².",
-        },
-    },
-    {
-        "question": "What is the patient's age in years?",
-        "patient_context": """Patient Information:
-- Name: Sarah Smith
-- Date of Birth: 1985-03-15
-- Gender: Female
-
-Visit Notes:
-1. Patient is a 40-year-old female presenting for follow-up.""",
-        "expected_output": {
-            "answer": "40 years",
-            "confidence": 1.0,
-            "reasoning": "Age is explicitly stated in visit notes as 40 years old, which matches the calculated age from DOB (1985-03-15).",
         },
     },
     {
@@ -76,31 +64,16 @@ Visit Notes:
         },
     },
     {
-        "question": "Does the patient have diabetes?",
+        "question": "Has the patient tried lifestyle modifications?",
         "patient_context": """Patient Information:
-- Name: Sarah Smith
+- Name: Jane Smith
 
 Visit Notes:
-1. Patient has history of hypertension, well controlled on lisinopril.
-2. Patient has dyslipidemia, on atorvastatin.
-3. No history of diabetes (last HbA1c 5.7% in May 2025).""",
+1. Patient mentions trying to eat better over the past few weeks.""",
         "expected_output": {
-            "answer": False,
-            "confidence": 1.0,
-            "reasoning": "Visit notes explicitly state 'No history of diabetes' and recent HbA1c of 5.7% is below the diagnostic threshold for diabetes.",
-        },
-    },
-    {
-        "question": "Has the patient been adherent to medication?",
-        "patient_context": """Patient Information:
-- Name: John Doe
-
-Visit Notes:
-1. Patient presents for follow-up regarding weight management therapy.""",
-        "expected_output": {
-            "answer": False,
-            "confidence": 0.5,
-            "reasoning": "No explicit information about medication adherence is provided in the visit notes. Cannot determine adherence from the available information.",
+            "answer": True,
+            "confidence": 0.6,
+            "reasoning": "Patient mentions attempting to eat better, which suggests lifestyle modification. However, the information is vague without specific details about the extent or consistency of changes, resulting in moderate confidence.",
         },
     },
 ]

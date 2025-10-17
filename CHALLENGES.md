@@ -43,13 +43,14 @@ parsed = completion.choices[0].message.parsed  # Type-safe!
 
 **Challenge:** Model inconsistency in answer format and confidence calibration.
 
-**Solution:** Added 6 examples (3 text, 3 boolean) demonstrating:
-- Proper confidence levels (1.0 for explicit, 0.0 for missing)
+**Solution:** Added 4 focused examples (2 text, 2 boolean) demonstrating:
+- High confidence (1.0) - Explicit information
+- Low confidence (0.0) - Missing information
+- Medium confidence (0.6) - Ambiguous information
 - Evidence citation format
-- Answer structure
 
-**Cost:** ~30% more tokens per request  
-**Benefit:** Significantly better consistency and quality
+**Cost:** ~20% more tokens per request  
+**Benefit:** Better consistency without excessive overhead
 
 **Location:** `app/examples.py`
 

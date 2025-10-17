@@ -18,7 +18,6 @@ Complete guide for setting up and running the Prior Authorization API.
 ### 1. Install Dependencies
 
 ```bash
-cd Anish-Gillella
 uv sync
 uv run pre-commit install
 ```
@@ -207,10 +206,11 @@ HTTP Request → FastAPI Endpoint
 ### 1. Few-Shot Prompting
 **Location:** `app/examples.py`
 
-Provides 6 examples (3 text, 3 boolean) showing:
-- Proper answer format
-- Confidence calibration (1.0 for explicit, 0.0 for missing)
-- Evidence citation
+Provides 4 focused examples (2 text, 2 boolean) covering:
+- High confidence (1.0) - Explicit information
+- Low confidence (0.0) - Missing information  
+- Medium confidence (0.6) - Ambiguous information
+- Evidence citation format
 
 ### 2. Actor-Critic System  
 **Location:** `app/actor_critic.py`
