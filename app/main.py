@@ -1,10 +1,11 @@
+from pathlib import Path
+
+import logfire
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-import logfire
+from fastapi.staticfiles import StaticFiles
 from openai import AsyncOpenAI
-from pathlib import Path
 
 from app.env import get_openrouter_api_key, get_openrouter_model, setup_env
 from app.examples import format_few_shot_examples
@@ -46,7 +47,11 @@ logfire.instrument_fastapi(app)
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Mount static files for frontend
-app.mount("/sample_data", StaticFiles(directory=str(BASE_DIR / "sample_data")), name="sample_data")
+app.mount(
+    "/sample_data",
+    StaticFiles(directory=str(BASE_DIR / "sample_data")),
+    name="sample_data",
+)
 
 # Initialize OpenRouter client (OpenAI-compatible)
 openrouter_client = AsyncOpenAI(
@@ -97,7 +102,9 @@ Visit Notes:
     return context
 
 
-async def answer_question(patient_context: str, question) -> tuple[str | bool, float, str]:
+async def answer_question(
+    patient_context: str, question
+) -> tuple[str | bool, float, str]:
     """
     Use LLM with Pydantic structured outputs to answer a single question based on patient context.
     Uses few-shot prompting to improve answer quality.
@@ -183,7 +190,11 @@ Include your confidence level and explain your reasoning."""
                 has_reasoning=bool(parsed_response.reasoning),
             )
 
-            return parsed_response.answer, parsed_response.confidence, parsed_response.reasoning
+            return (
+                parsed_response.answer,
+                parsed_response.confidence,
+                parsed_response.reasoning,
+            )
 
         except Exception as e:
             logfire.error(
@@ -194,7 +205,7 @@ Include your confidence level and explain your reasoning."""
             raise HTTPException(
                 status_code=500,
                 detail=f"Error generating answer for question '{question.key}': {str(e)}",
-            )
+            ) from e
 
 
 @app.post("/answers")

@@ -124,7 +124,7 @@ def format_few_shot_examples(question_type: str) -> str:
         formatted += f"Example {i}:\n"
         formatted += f"Question: {example['question']}\n\n"
         formatted += f"Patient Context:\n{example['patient_context']}\n\n"
-        formatted += f"Expected Answer:\n"
+        formatted += "Expected Answer:\n"
         formatted += f"  answer: {example['expected_output']['answer']}\n"
         formatted += f"  confidence: {example['expected_output']['confidence']}\n"
         formatted += f"  reasoning: {example['expected_output']['reasoning']}\n\n"
@@ -132,4 +132,3 @@ def format_few_shot_examples(question_type: str) -> str:
     formatted += "Now answer the following question in the same format:\n"
 
     return formatted
-

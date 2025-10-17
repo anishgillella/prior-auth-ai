@@ -5,7 +5,6 @@ This module provides automated evaluation of the /answers endpoint
 to measure accuracy, confidence calibration, and reasoning quality.
 """
 
-import asyncio
 import json
 from pathlib import Path
 from typing import Any
@@ -28,7 +27,9 @@ class EvaluationMetrics:
         self.confidence_scores = []
         self.failures = []
 
-    def add_result(self, case_name: str, passed: bool, confidence: float, details: str = ""):
+    def add_result(
+        self, case_name: str, passed: bool, confidence: float, details: str = ""
+    ):
         """Add a test case result."""
         self.total_cases += 1
         self.confidence_scores.append(confidence)
@@ -37,11 +38,9 @@ class EvaluationMetrics:
             self.passed_cases += 1
         else:
             self.failed_cases += 1
-            self.failures.append({
-                "case": case_name,
-                "confidence": confidence,
-                "details": details
-            })
+            self.failures.append(
+                {"case": case_name, "confidence": confidence, "details": details}
+            )
 
     def get_summary(self) -> dict[str, Any]:
         """Get summary statistics."""
@@ -49,10 +48,19 @@ class EvaluationMetrics:
             "total_cases": self.total_cases,
             "passed": self.passed_cases,
             "failed": self.failed_cases,
-            "pass_rate": self.passed_cases / self.total_cases if self.total_cases > 0 else 0,
-            "average_confidence": sum(self.confidence_scores) / len(self.confidence_scores) if self.confidence_scores else 0,
-            "min_confidence": min(self.confidence_scores) if self.confidence_scores else 0,
-            "max_confidence": max(self.confidence_scores) if self.confidence_scores else 0,
+            "pass_rate": self.passed_cases / self.total_cases
+            if self.total_cases > 0
+            else 0,
+            "average_confidence": sum(self.confidence_scores)
+            / len(self.confidence_scores)
+            if self.confidence_scores
+            else 0,
+            "min_confidence": min(self.confidence_scores)
+            if self.confidence_scores
+            else 0,
+            "max_confidence": max(self.confidence_scores)
+            if self.confidence_scores
+            else 0,
         }
 
 
@@ -85,7 +93,9 @@ def evaluate_answer(answer: dict, expected: dict, case_name: str) -> tuple[bool,
 
         if expected_text not in actual_answer:
             passed = False
-            details.append(f"Answer should contain '{expected['answer_contains']}' but got '{answer['value']}'")
+            details.append(
+                f"Answer should contain '{expected['answer_contains']}' but got '{answer['value']}'"
+            )
 
     # Check exact boolean answer
     if "answer" in expected:
@@ -97,13 +107,17 @@ def evaluate_answer(answer: dict, expected: dict, case_name: str) -> tuple[bool,
     if "min_confidence" in expected:
         if answer["confidence"] < expected["min_confidence"]:
             passed = False
-            details.append(f"Confidence {answer['confidence']:.2f} below minimum {expected['min_confidence']}")
+            details.append(
+                f"Confidence {answer['confidence']:.2f} below minimum {expected['min_confidence']}"
+            )
 
     # Check maximum confidence (for uncertain cases)
     if "max_confidence" in expected:
         if answer["confidence"] > expected["max_confidence"]:
             passed = False
-            details.append(f"Confidence {answer['confidence']:.2f} above maximum {expected['max_confidence']}")
+            details.append(
+                f"Confidence {answer['confidence']:.2f} above maximum {expected['max_confidence']}"
+            )
 
     # Check reasoning is provided
     if expected.get("must_cite_source", False):
@@ -198,11 +212,11 @@ def print_summary(metrics: EvaluationMetrics):
         print()
 
     # Overall grade
-    if summary['pass_rate'] >= 0.9:
+    if summary["pass_rate"] >= 0.9:
         grade = "🎉 EXCELLENT"
-    elif summary['pass_rate'] >= 0.75:
+    elif summary["pass_rate"] >= 0.75:
         grade = "✅ GOOD"
-    elif summary['pass_rate'] >= 0.5:
+    elif summary["pass_rate"] >= 0.5:
         grade = "⚠️  NEEDS IMPROVEMENT"
     else:
         grade = "❌ POOR"
@@ -214,4 +228,3 @@ def print_summary(metrics: EvaluationMetrics):
 if __name__ == "__main__":
     metrics = run_evaluation()
     print_summary(metrics)
-
