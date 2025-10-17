@@ -90,7 +90,9 @@ class EvaluationMetrics:
 def load_test_cases() -> list[dict]:
     """Load evaluation test cases from JSON file."""
     # Load from sample_data directory instead of fixtures
-    sample_data_path = Path(__file__).parent.parent / "sample_data" / "eval_test_cases.json"
+    sample_data_path = (
+        Path(__file__).parent.parent / "sample_data" / "eval_test_cases.json"
+    )
     with open(sample_data_path) as f:
         return json.load(f)
 
@@ -202,11 +204,13 @@ async def run_evaluation() -> EvaluationMetrics:
 
             # Call the actual /answers HTTP endpoint
             response = client.post("/answers", json=request_data.model_dump())
-            
+
             # Check for errors
             if response.status_code != 200:
-                raise Exception(f"API returned {response.status_code}: {response.json()}")
-            
+                raise Exception(
+                    f"API returned {response.status_code}: {response.json()}"
+                )
+
             # Parse response
             result = response.json()
             answer = result["answers"][0]
@@ -238,7 +242,9 @@ async def run_evaluation() -> EvaluationMetrics:
             status = "✅ PASS" if passed else "❌ FAIL"
             print(f"  {status} (Overall Score: {overall_score:.2f})")
             print(f"    • Accuracy: {evaluation.accuracy_score:.2f}")
-            print(f"    • Confidence Calibration: {evaluation.confidence_appropriate:.2f}")
+            print(
+                f"    • Confidence Calibration: {evaluation.confidence_appropriate:.2f}"
+            )
             print(f"    • Reasoning Quality: {evaluation.reasoning_quality:.2f}")
             print(f"  📝 Evaluation: {evaluation.explanation}")
             print()
