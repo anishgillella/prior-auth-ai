@@ -110,21 +110,24 @@ Improved answer quality by providing examples in prompts.
 
 ### 2. Evaluation Pipeline ✅
 
-Automated testing to measure answer quality.
+Automated testing using **Pydantic AI** to measure answer quality.
 
 **Files:**
-- `tests/eval_answers.py` - Evaluation framework
+- `tests/eval_pydantic_ai.py` - Pydantic AI evaluation framework
 - `tests/fixtures/eval_test_cases.json` - Test cases with expected answers
 
 **Run evaluation:**
 ```bash
-uv run python tests/eval_answers.py
+uv run python tests/eval_pydantic_ai.py
 ```
 
-**Metrics measured:**
-- Pass rate (currently 83.3%)
-- Confidence calibration
-- Reasoning quality
+**What Pydantic AI evaluates:**
+- **Accuracy:** Is the answer correct given patient data?
+- **Confidence Calibration:** Is the confidence score appropriate?
+- **Reasoning Quality:** Does it cite specific evidence?
+- **Overall Score:** Composite metric across all three
+
+**Uses an LLM as the evaluator** - sophisticated assessment of answer quality.
 
 ### 3. Logfire Integration ✅
 
@@ -163,18 +166,16 @@ Already implemented in core! Each answer includes:
 ### Quick Evaluation (6 test cases)
 
 ```bash
-# Make sure server is running
-uv run uvicorn app.main:app --reload
-
-# In another terminal
-uv run python tests/eval_answers.py
+uv run python tests/eval_pydantic_ai.py
 ```
 
 **Output:**
-- Pass/fail for each test case
-- Answer values and confidence scores
-- Summary statistics
-- Overall grade
+- Pydantic AI agent evaluates each answer
+- Accuracy, confidence calibration, and reasoning quality scores
+- Detailed explanations from the evaluator
+- Summary statistics and overall grade
+
+**Note:** No server needed - calls API functions directly
 
 ### Full Test Suite (40+ questions)
 

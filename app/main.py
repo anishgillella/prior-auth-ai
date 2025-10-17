@@ -81,6 +81,19 @@ async def health_check():
     }
 
 
+@app.get("/favicon.ico")
+async def favicon():
+    """Return empty response for favicon to avoid 404."""
+    return {}
+
+
+@app.get("/apple-touch-icon.png")
+@app.get("/apple-touch-icon-precomposed.png")
+async def apple_touch_icon():
+    """Return empty response for apple touch icons to avoid 404."""
+    return {}
+
+
 def build_patient_context(patient) -> str:
     """Build a comprehensive patient context string for the LLM."""
     context = f"""Patient Information:
