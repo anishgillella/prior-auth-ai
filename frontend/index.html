@@ -325,6 +325,7 @@
                 <div class="sample-buttons">
                     <button class="sample-btn" onclick="loadSimpleExample()">📝 Simple Example</button>
                     <button class="sample-btn" onclick="loadDetailedExample()">📋 Detailed Example</button>
+                    <button class="sample-btn" onclick="loadActorCriticExample()" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">🎭 Actor-Critic Demo</button>
                 </div>
                 <textarea id="jsonInput" placeholder='Paste your JSON here or click a sample button above...'></textarea>
             </div>
@@ -417,6 +418,22 @@
                     document.getElementById('jsonInput').value = JSON.stringify(data, null, 2);
                 })
                 .catch(() => loadSimpleExample());
+        }
+
+        function loadActorCriticExample() {
+            fetch('/sample_data/actor_critic_example.json')
+                .then(r => r.json())
+                .then(data => {
+                    document.getElementById('jsonInput').value = JSON.stringify(data, null, 2);
+                    // Show info about what to expect
+                    setTimeout(() => {
+                        alert('🎭 Actor-Critic Demo Loaded!\n\nThis example contains ambiguous patient information that will:\n✅ Trigger low initial confidence (< 0.7)\n✅ Activate Actor-Critic system\n✅ Show refined answers with improvement\n\nLook for "[Refined via Actor-Critic]" in the reasoning!\n\nCheck Logfire dashboard to see the full actor-critic flow.');
+                    }, 100);
+                })
+                .catch(() => {
+                    alert('Could not load actor-critic example. Please ensure the server is running.');
+                    loadSimpleExample();
+                });
         }
 
         function clearForm() {
@@ -537,7 +554,7 @@
 
                 <div class="reasoning">
                     <span class="reasoning-label">💡 Reasoning:</span>
-                    ${answer.reasoning}
+                    ${formatReasoning(answer.reasoning)}
                 </div>
             `;
 
@@ -549,6 +566,14 @@
                 return value ? '✅ Yes' : '❌ No';
             }
             return value;
+        }
+
+        function formatReasoning(reasoning) {
+            // Highlight actor-critic usage
+            if (reasoning.includes('[Refined via Actor-Critic]')) {
+                return `<span style="display: inline-block; padding: 4px 8px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 4px; font-weight: 600; margin-right: 8px;">🎭 Actor-Critic</span>${reasoning.replace('[Refined via Actor-Critic]', '')}`;
+            }
+            return reasoning;
         }
 
         // Load simple example on page load

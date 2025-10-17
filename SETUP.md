@@ -221,7 +221,36 @@ Provides 4 focused examples (2 text, 2 boolean) covering:
 - Actor regenerates improved answer
 - Tracks improvement in Logfire
 
-**Example:** Missing BMI info improved from 0.0 → 0.9 confidence
+**Try it yourself:**
+```bash
+# Test with ambiguous patient data that triggers actor-critic
+curl -X POST "http://localhost:8000/answers" \
+  -H "Content-Type: application/json" \
+  -d @sample_data/actor_critic_example.json
+```
+
+**What you'll see:**
+1. **Initial Answer:** Low confidence (e.g., 0.5-0.6) due to vague information
+2. **Actor-Critic Triggered:** System detects low confidence
+3. **Critic Feedback:** "Information is vague, lacks specific details..."
+4. **Refined Answer:** Improved confidence and reasoning
+
+**Check Logfire for:**
+- `invoking_actor_critic` span
+- `critique_answer` with feedback
+- `answer_refined` with improvement metrics
+
+**Example output:**
+```json
+{
+  "question": "Has patient completed structured lifestyle program?",
+  "value": false,
+  "confidence": 0.65,
+  "reasoning": "[Refined via Actor-Critic] Patient mentions trying to eat better and occasional walks, but there is no documentation of a structured program with at least 6 months of consistent effort..."
+}
+```
+
+Notice the `[Refined via Actor-Critic]` prefix in the reasoning!
 
 ### 3. Evaluation Pipeline
 **Location:** `tests/eval_pydantic_ai.py`

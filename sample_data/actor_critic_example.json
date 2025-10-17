@@ -1,0 +1,35 @@
+{
+  "patient": {
+    "first_name": "Sarah",
+    "last_name": "Martinez",
+    "date_of_birth": "1982-07-15",
+    "gender": "Female",
+    "prescription": {
+      "medication": "Zepbound",
+      "dosage": "5 mg",
+      "frequency": "once weekly",
+      "duration": "ongoing"
+    },
+    "visit_notes": [
+      "Patient mentions trying to eat better over the past few weeks.",
+      "Patient reports occasional walks in the neighborhood.",
+      "Interested in weight management options."
+    ]
+  },
+  "question_set": {
+    "name": "Actor-Critic Demo",
+    "questions": [
+      {
+        "type": "boolean",
+        "key": "structured_lifestyle_program",
+        "content": "Has the patient completed a structured lifestyle modification program with documented attempts at diet and exercise for at least 6 months?"
+      },
+      {
+        "type": "text",
+        "key": "weight_loss_percentage",
+        "content": "What percentage of body weight has the patient lost through lifestyle modifications?"
+      }
+    ]
+  }
+}
+
