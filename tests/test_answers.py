@@ -22,11 +22,15 @@ def print_test_header(test_name, description=""):
     print(f"{'═' * 80}\n")
 
 
-def print_answers(result, request_data=None, show_reasoning=True):
+def print_answers(
+    result, request_data=None, show_reasoning=True, show_per_question_tokens=True
+):
     """Print formatted answers with token tracking."""
     print(f"{'─' * 80}")
     print(f"📊 Generated {len(result['answers'])} answers")
     print(f"{'─' * 80}\n")
+
+    question_tokens_list = []
 
     for i, answer in enumerate(result["answers"], 1):
         question = answer["question"]
@@ -53,6 +57,12 @@ def print_answers(result, request_data=None, show_reasoning=True):
                 reasoning = reasoning.replace("[Refined via Actor-Critic]", "").strip()
             print(f"   🧠 Reasoning: {reasoning}")
 
+        # Calculate tokens for this question-answer pair
+        if show_per_question_tokens and request_data:
+            q_tokens = count_tokens({"question": question, "answer": answer})
+            question_tokens_list.append(q_tokens)
+            print(f"   🔢 Tokens: ~{q_tokens:,}")
+
         print()
 
     # Calculate and display token usage if request_data provided
@@ -64,12 +74,22 @@ def print_answers(result, request_data=None, show_reasoning=True):
 
         # Print stats for this test
         print(f"{'─' * 80}")
-        print("📊 Token Usage:")
-        print(f"   📥 Input:  {input_tokens:,} tokens")
-        print(f"   📤 Output: {output_tokens:,} tokens")
+        print("📊 Total Test Token Usage:")
+        print(f"   📥 Input:  {input_tokens:,} tokens (patient data + all questions)")
+        print(f"   📤 Output: {output_tokens:,} tokens (all answers + reasoning)")
         print(f"   🔢 Total:  {input_tokens + output_tokens:,} tokens")
         print(f"   💰 Cost:   ${cost:.4f}")
+
+        if question_tokens_list:
+            avg_tokens = sum(question_tokens_list) / len(question_tokens_list)
+            print("\n   Per Question Stats:")
+            print(f"   • Avg tokens/question: ~{avg_tokens:.0f}")
+            print(f"   • Min tokens: ~{min(question_tokens_list):,}")
+            print(f"   • Max tokens: ~{max(question_tokens_list):,}")
+
         print(f"{'─' * 80}\n")
+
+    return question_tokens_list if show_per_question_tokens else []
 
 
 # Fixtures

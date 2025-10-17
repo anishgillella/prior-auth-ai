@@ -188,4 +188,3 @@ class TokenTracker:
         self.total_output_tokens = 0
         self.total_cost = 0.0
         self.call_count = 0
-
