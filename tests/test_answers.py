@@ -59,9 +59,11 @@ def print_answers(
 
         # Calculate tokens for this question-answer pair
         if show_per_question_tokens and request_data:
-            q_tokens = count_tokens({"question": question, "answer": answer})
-            question_tokens_list.append(q_tokens)
-            print(f"   🔢 Tokens: ~{q_tokens:,}")
+            q_input_tokens = count_tokens({"question": question})
+            q_output_tokens = count_tokens({"answer": answer})
+            question_tokens_list.append(q_input_tokens + q_output_tokens)
+            print(f"   📥 Input: ~{q_input_tokens:,} tokens")
+            print(f"   📤 Output: ~{q_output_tokens:,} tokens")
 
         print()
 
@@ -364,3 +366,13 @@ def test_summary(detailed_patient_data, simple_patient_data, actor_critic_data):
     token_tracker.print_summary()
 
     print(f"\n{'═' * 80}\n")
+
+
+@pytest.fixture(scope="session", autouse=True)
+def flush_logfire_on_exit():
+    """Ensure Logfire logs are flushed after all tests complete."""
+    yield
+    # This runs after all tests
+    import logfire
+
+    logfire.force_flush()

@@ -10,21 +10,72 @@
       "frequency": "once weekly",
       "duration": "ongoing"
     },
-    "visit_notes": ["Patient presents for follow-up regarding weight management therapy. Has been compliant with medication regimen."]
+    "visit_notes": [
+      "Patient presents for follow-up regarding weight management therapy. Has been compliant with medication regimen for 8 weeks.",
+      "Current weight: 245 lbs, Height: 5'10\". BMI calculated at 35.2 kg/m². Down from initial weight of 268 lbs.",
+      "Patient reports improved energy levels and decreased appetite. No significant adverse effects reported.",
+      "Comorbidities: Type 2 Diabetes (HbA1c 7.2%, improved from 8.1%), Hypertension (BP 138/85, on Lisinopril 10mg daily).",
+      "Patient has been attending dietitian visits bi-weekly for nutritional counseling and has started supervised exercise program (3x/week, 30 minutes each).",
+      "Weight loss progression: Week 1-2: 3 lbs, Week 3-4: 2.5 lbs, Week 5-8: 4 lbs. Total loss: 9.5 lbs over 8 weeks.",
+      "Family history significant for obesity and type 2 diabetes. Spouse also enrolled in weight management program.",
+      "Previous weight loss attempts documented: Tried low-carb diet (2019, lost 15 lbs, regained 22 lbs), Joined gym (2021, inconsistent attendance).",
+      "No contraindications to continued therapy. Patient expresses strong motivation to continue treatment.",
+      "Plan: Continue current regimen, increase to 10mg dose next visit if tolerating well, recheck labs in 3 months."
+    ]
   },
   "question_set": {
-    "name": "Prior Authorization Questions",
+    "name": "Prior Authorization - Weight Management Therapy",
     "questions": [
       {
         "type": "text",
         "key": "patient_bmi",
-        "content": "What is the patient's BMI?"
+        "content": "What is the patient's current BMI?"
       },
       {
         "type": "boolean",
         "key": "tried_lifestyle_modifications",
-        "content": "Has the patient tried lifestyle modifications?"
+        "content": "Has the patient tried and failed lifestyle modifications alone?"
+      },
+      {
+        "type": "text",
+        "key": "weight_loss_achieved",
+        "content": "How much weight has the patient lost since starting this medication?"
+      },
+      {
+        "type": "boolean",
+        "key": "has_comorbidities",
+        "content": "Does the patient have weight-related comorbidities (diabetes, hypertension, etc.)?"
+      },
+      {
+        "type": "text",
+        "key": "comorbidities_list",
+        "content": "List the patient's weight-related comorbidities and their current status."
+      },
+      {
+        "type": "boolean",
+        "key": "medication_tolerated",
+        "content": "Has the patient tolerated the medication well without significant adverse effects?"
+      },
+      {
+        "type": "text",
+        "key": "previous_weight_loss_attempts",
+        "content": "What previous weight loss attempts has the patient made and what were the outcomes?"
+      },
+      {
+        "type": "boolean",
+        "key": "enrolled_in_behavioral_program",
+        "content": "Is the patient enrolled in a structured behavioral weight loss program?"
+      },
+      {
+        "type": "text",
+        "key": "ongoing_support",
+        "content": "What ongoing support and monitoring is in place for the patient?"
+      },
+      {
+        "type": "text",
+        "key": "initial_bmi",
+        "content": "What was the patient's BMI at the start of medication therapy?"
       }
     ]
   }
-} 
+}

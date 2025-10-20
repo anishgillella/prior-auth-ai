@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 def setup_env():
     load_dotenv()
 
-    if logfire_token := os.getenv("LOGFIRE_KEY"):
+    if logfire_token := os.getenv("LOGFIRE_TOKEN"):
         logfire.configure(token=logfire_token)
         logfire.instrument_asyncpg()
 

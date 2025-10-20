@@ -30,8 +30,12 @@ from .models import (
 
 setup_env()
 
-# Configure Logfire for observability
-logfire.configure()
+# Configure Logfire for observability - ensure token is passed and flush on shutdown
+logfire.configure(
+    token=None,  # Will use LOGFIRE_TOKEN from env
+    service_name="pharmacy-prior-auth-api",
+    environment="development",
+)
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -68,6 +72,12 @@ openrouter_client = AsyncOpenAI(
 
 # Instrument OpenAI client with Logfire
 logfire.instrument_openai(AsyncOpenAI)
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Ensure Logfire logs are flushed before shutdown."""
+    logfire.force_flush()
 
 
 @app.get("/")
